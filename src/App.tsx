@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { QuoteData, WatermarkSettings, QuoteCustomerInfo, PlanColumn, AddonItem, CustomServiceItem, DiscountSettings } from './types';
-import { ProposalThemeKey } from './data/themes';
 import { INITIAL_QUOTE_STATE } from './data/defaults';
 import { Navbar } from './components/Navbar';
 import { CustomerHeader } from './components/CustomerHeader';
@@ -11,7 +10,6 @@ import { LineItemsSummary } from './components/LineItemsSummary';
 import { WatermarkBackground } from './components/WatermarkBackground';
 import { WatermarkConfigModal } from './components/WatermarkConfigModal';
 import { QuoteHistoryModal } from './components/QuoteHistoryModal';
-import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 
 export default function App() {
   const [quote, setQuote] = useState<QuoteData>(() => {
@@ -28,7 +26,6 @@ export default function App() {
 
   const [isWatermarkModalOpen, setIsWatermarkModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [isGoogleSheetsModalOpen, setIsGoogleSheetsModalOpen] = useState(false);
 
   // Auto-save active state to localStorage
   useEffect(() => {
@@ -42,10 +39,6 @@ export default function App() {
   // Handlers for state mutation
   const handleUpdateCustomerInfo = (customerInfo: QuoteCustomerInfo) => {
     setQuote((prev) => ({ ...prev, customerInfo, updatedAt: new Date().toISOString() }));
-  };
-
-  const handleUpdateTheme = (themePreset: ProposalThemeKey) => {
-    setQuote((prev) => ({ ...prev, themePreset, updatedAt: new Date().toISOString() }));
   };
 
   const handleUpdatePlans = (plans: PlanColumn[]) => {
@@ -120,11 +113,15 @@ export default function App() {
     });
   };
 
-  return (
-    <div className="min-h-screen bg-[#f4f6fa] text-[#2c3260] font-sans relative antialiased selection:bg-teal-500/20 selection:text-teal-900">
-      {/* Background Watermark Rendering */}
-      <WatermarkBackground settings={quote.watermarkSettings} />
+  const currencySymbol =
+    quote.customerInfo.currency === 'EUR'
+      ? '€'
+      : quote.customerInfo.currency === 'GBP'
+      ? '£'
+      : '$';
 
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 via-purple-50/30 to-pink-50/40 text-slate-800 font-sans relative antialiased selection:bg-purple-500/20 selection:text-purple-900">
       {/* Main Sticky Navbar */}
       <Navbar
         watermarkSettings={quote.watermarkSettings}
@@ -135,76 +132,80 @@ export default function App() {
         onResetQuote={handleResetQuote}
       />
 
-      {/* Main Pricing Card Container */}
+      {/* Main Pricing Card Container with Watermark Layer behind Form */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10">
-        <div className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-3xl shadow-xl p-4 sm:p-8 space-y-6 sm:space-y-8">
-          {/* Section 1: Customer Header, Theme Selector & Vendor Logo */}
-          <CustomerHeader
-            customerInfo={quote.customerInfo}
-            themePreset={quote.themePreset}
-            onChangeCustomerInfo={handleUpdateCustomerInfo}
-            onChangeTheme={handleUpdateTheme}
-          />
+        <div className="relative overflow-hidden bg-white/95 backdrop-blur-xl border border-purple-100/80 rounded-3xl shadow-xl shadow-purple-950/5 p-4 sm:p-8 space-y-6 sm:space-y-8">
+          {/* Background Watermark Layer - Sits behind the entire form and scrolls naturally */}
+          <WatermarkBackground settings={quote.watermarkSettings} />
 
-          {/* Section 2: Deployment Plans & License Tiers */}
-          <TierSection
-            plans={quote.plans}
-            onChangePlans={handleUpdatePlans}
-            currencySymbol={quote.customerInfo.currency === 'EUR' ? '€' : quote.customerInfo.currency === 'GBP' ? '£' : '$'}
-          />
-
-          {/* Section 3: Premium Add-ons Checklist */}
-          {quote.showAddonsSection !== false ? (
-            <AddonsSection
-              addons={quote.addons}
-              onChangeAddons={handleUpdateAddons}
-              currencySymbol={quote.customerInfo.currency === 'EUR' ? '€' : quote.customerInfo.currency === 'GBP' ? '£' : '$'}
-              onRemoveSection={handleToggleAddonsSection}
+          <div className="relative z-10 space-y-6 sm:space-y-8">
+            {/* Section 1: Customer Header & Commercial Metadata */}
+            <CustomerHeader
+              customerInfo={quote.customerInfo}
+              onChangeCustomerInfo={handleUpdateCustomerInfo}
             />
-          ) : (
-            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-3 flex items-center justify-between text-xs text-slate-500">
-              <span>Add-ons Section Hidden</span>
-              <button
-                type="button"
-                onClick={handleToggleAddonsSection}
-                className="text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1 rounded-lg border border-teal-200 transition"
-              >
-                + Restore Add-ons Section
-              </button>
-            </div>
-          )}
 
-          {/* Section 4: Professional Custom Services */}
-          {quote.showServicesSection !== false ? (
-            <CustomServicesSection
-              services={quote.customServices}
-              onChangeServices={handleUpdateCustomServices}
-              currencySymbol={quote.customerInfo.currency === 'EUR' ? '€' : quote.customerInfo.currency === 'GBP' ? '£' : '$'}
-              onRemoveSection={handleToggleServicesSection}
+            {/* Section 2: Deployment Plans & License Tiers */}
+            <TierSection
+              plans={quote.plans}
+              onChangePlans={handleUpdatePlans}
+              currencySymbol={currencySymbol}
             />
-          ) : (
-            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-3 flex items-center justify-between text-xs text-slate-500">
-              <span>Professional Services Section Hidden</span>
-              <button
-                type="button"
-                onClick={handleToggleServicesSection}
-                className="text-xs font-bold text-[#2c3260] bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-lg border border-slate-300 transition"
-              >
-                + Restore Professional Services Section
-              </button>
-            </div>
-          )}
 
-          {/* Section 5: Itemized Line Items, Multi-Year Payment Terms, Creator Footer & Export Actions */}
-          <LineItemsSummary
-            quote={quote}
-            onChangeDiscount={handleUpdateDiscount}
-            onChangeDisclaimer={(disclaimerNotice) => setQuote((prev) => ({ ...prev, disclaimerNotice }))}
-            onChangeCreatorInfo={handleUpdateCreatorInfo}
-            onExcludeLineItem={handleExcludeLineItem}
-            onOpenGoogleSheetsModal={() => setIsGoogleSheetsModalOpen(true)}
-            currencyCode={quote.customerInfo.currency || 'USD'}
-          />
+            {/* Section 3: Premium Add-ons Checklist */}
+            {quote.showAddonsSection !== false ? (
+              <AddonsSection
+                addons={quote.addons}
+                onChangeAddons={handleUpdateAddons}
+                currencySymbol={currencySymbol}
+                onRemoveSection={handleToggleAddonsSection}
+              />
+            ) : (
+              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-3 flex items-center justify-between text-xs text-slate-500">
+                <span>Add-ons Section Hidden</span>
+                <button
+                  type="button"
+                  onClick={handleToggleAddonsSection}
+                  className="text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1 rounded-lg border border-teal-200 transition"
+                  title="Restore Premium Add-ons Section"
+                >
+                  + Restore Add-ons Section
+                </button>
+              </div>
+            )}
+
+            {/* Section 4: Professional Custom Services */}
+            {quote.showServicesSection !== false ? (
+              <CustomServicesSection
+                services={quote.customServices}
+                onChangeServices={handleUpdateCustomServices}
+                currencySymbol={currencySymbol}
+                onRemoveSection={handleToggleServicesSection}
+              />
+            ) : (
+              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-3 flex items-center justify-between text-xs text-slate-500">
+                <span>Professional Services Section Hidden</span>
+                <button
+                  type="button"
+                  onClick={handleToggleServicesSection}
+                  className="text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-lg border border-slate-300 transition"
+                  title="Restore Professional Services Section"
+                >
+                  + Restore Professional Services Section
+                </button>
+              </div>
+            )}
+
+            {/* Section 5: Itemized Line Items, Multi-Year Payment Terms, Creator Footer & Export Action */}
+            <LineItemsSummary
+              quote={quote}
+              onChangeDiscount={handleUpdateDiscount}
+              onChangeDisclaimer={(disclaimerNotice) => setQuote((prev) => ({ ...prev, disclaimerNotice }))}
+              onChangeCreatorInfo={handleUpdateCreatorInfo}
+              onExcludeLineItem={handleExcludeLineItem}
+              currencyCode={quote.customerInfo.currency || 'USD'}
+            />
+          </div>
         </div>
       </main>
 
@@ -221,12 +222,6 @@ export default function App() {
         onClose={() => setIsHistoryModalOpen(false)}
         currentQuote={quote}
         onLoadQuote={(q) => setQuote(q)}
-      />
-
-      <GoogleSheetsModal
-        isOpen={isGoogleSheetsModalOpen}
-        onClose={() => setIsGoogleSheetsModalOpen(false)}
-        quote={quote}
       />
     </div>
   );

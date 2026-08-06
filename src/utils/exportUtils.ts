@@ -1,11 +1,7 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from 'docx';
-import { saveAs } from 'file-saver';
-import * as XLSX from 'xlsx';
-import { QuoteData, QuoteCalculatedLineItem } from '../types';
+import autoTable from 'jspdf-autotable';
+import { QuoteData, QuoteCalculatedLineItem, CreatorContactInfo } from '../types';
 import { CURRENCIES } from '../data/defaults';
-import { PROPOSAL_THEMES } from '../data/themes';
 
 // Utility currency formatter
 export function formatCurrencyVal(amount: number, currencyCode: string = 'USD'): string {
@@ -23,7 +19,7 @@ export function formatCurrencyVal(amount: number, currencyCode: string = 'USD'):
 
 // Convert Hex Color to RGB tuple for jsPDF
 function hexToRgb(hex: string): [number, number, number] {
-  let cleanHex = hex.replace('#', '');
+  let cleanHex = (hex || '#6366f1').replace('#', '');
   if (cleanHex.length === 3) {
     cleanHex = cleanHex.split('').map((char) => char + char).join('');
   }
@@ -55,106 +51,108 @@ export function calculateQuoteLineItems(quote: QuoteData): {
   let subtotalDiscounted = 0;
 
   // Process Tiers
-  quote.plans.forEach((plan) => {
-    if (plan.hidden) return;
-    plan.tiers.forEach((tier) => {
-      // Device Licenses
-      if (tier.deviceQty > 0) {
-        const itemId = `${tier.id}-device`;
-        if (!excludedSet.has(itemId)) {
-          const isDiscountable = tier.deviceDiscountable !== false;
-          const discountRate = isDiscountable ? globalDiscountRate : 0;
+  if (quote.plans) {
+    quote.plans.forEach((plan) => {
+      if (plan.hidden) return;
+      plan.tiers.forEach((tier) => {
+        // Device Licenses
+        if (tier.deviceQty > 0) {
+          const itemId = `${tier.id}-device`;
+          if (!excludedSet.has(itemId)) {
+            const isDiscountable = tier.deviceDiscountable !== false;
+            const discountRate = isDiscountable ? globalDiscountRate : 0;
 
-          const origUnit = tier.deviceCost || 0;
-          const discUnit = origUnit * (1 - discountRate);
-          const origTotal = origUnit * tier.deviceQty;
-          const discTotal = discUnit * tier.deviceQty;
+            const origUnit = tier.deviceCost || 0;
+            const discUnit = origUnit * (1 - discountRate);
+            const origTotal = origUnit * tier.deviceQty;
+            const discTotal = discUnit * tier.deviceQty;
 
-          subtotalOriginal += origTotal;
-          subtotalDiscounted += discTotal;
+            subtotalOriginal += origTotal;
+            subtotalDiscounted += discTotal;
 
-          lineItems.push({
-            id: itemId,
-            type: 'tier-device',
-            label: `${plan.title} · ${tier.label || 'Tier'} (Device Licence(s))`,
-            note: tier.note,
-            qty: tier.deviceQty,
-            unitCostOriginal: origUnit,
-            unitCostDiscounted: discUnit,
-            totalOriginal: origTotal,
-            totalDiscounted: discTotal,
-            isDiscountable,
-            sourceRef: tier.id,
-          });
+            lineItems.push({
+              id: itemId,
+              type: 'tier-device',
+              label: `${plan.title} · ${tier.label || 'Tier'} (Device Licence(s))`,
+              note: tier.note,
+              qty: tier.deviceQty,
+              unitCostOriginal: origUnit,
+              unitCostDiscounted: discUnit,
+              totalOriginal: origTotal,
+              totalDiscounted: discTotal,
+              isDiscountable,
+              sourceRef: tier.id,
+            });
+          }
         }
-      }
 
-      // Browser Licenses
-      if (tier.browserQty > 0) {
-        const itemId = `${tier.id}-browser`;
-        if (!excludedSet.has(itemId)) {
-          const isDiscountable = tier.browserDiscountable !== false;
-          const discountRate = isDiscountable ? globalDiscountRate : 0;
+        // Browser Licenses
+        if (tier.browserQty > 0) {
+          const itemId = `${tier.id}-browser`;
+          if (!excludedSet.has(itemId)) {
+            const isDiscountable = tier.browserDiscountable !== false;
+            const discountRate = isDiscountable ? globalDiscountRate : 0;
 
-          const origUnit = tier.browserCost || 0;
-          const discUnit = origUnit * (1 - discountRate);
-          const origTotal = origUnit * tier.browserQty;
-          const discTotal = discUnit * tier.browserQty;
+            const origUnit = tier.browserCost || 0;
+            const discUnit = origUnit * (1 - discountRate);
+            const origTotal = origUnit * tier.browserQty;
+            const discTotal = discUnit * tier.browserQty;
 
-          subtotalOriginal += origTotal;
-          subtotalDiscounted += discTotal;
+            subtotalOriginal += origTotal;
+            subtotalDiscounted += discTotal;
 
-          lineItems.push({
-            id: itemId,
-            type: 'tier-browser',
-            label: `${plan.title} · ${tier.label || 'Tier'} (Browser Licence(s))`,
-            note: tier.note,
-            qty: tier.browserQty,
-            unitCostOriginal: origUnit,
-            unitCostDiscounted: discUnit,
-            totalOriginal: origTotal,
-            totalDiscounted: discTotal,
-            isDiscountable,
-            sourceRef: tier.id,
-          });
+            lineItems.push({
+              id: itemId,
+              type: 'tier-browser',
+              label: `${plan.title} · ${tier.label || 'Tier'} (Browser Licence(s))`,
+              note: tier.note,
+              qty: tier.browserQty,
+              unitCostOriginal: origUnit,
+              unitCostDiscounted: discUnit,
+              totalOriginal: origTotal,
+              totalDiscounted: discTotal,
+              isDiscountable,
+              sourceRef: tier.id,
+            });
+          }
         }
-      }
 
-      // Concurrent Channels
-      if (tier.concurrentQty && tier.concurrentQty > 0) {
-        const itemId = `${tier.id}-concurrent`;
-        if (!excludedSet.has(itemId)) {
-          const isDiscountable = tier.concurrentDiscountable !== false;
-          const discountRate = isDiscountable ? globalDiscountRate : 0;
+        // Concurrent Channels
+        if (tier.concurrentQty && tier.concurrentQty > 0) {
+          const itemId = `${tier.id}-concurrent`;
+          if (!excludedSet.has(itemId)) {
+            const isDiscountable = tier.concurrentDiscountable !== false;
+            const discountRate = isDiscountable ? globalDiscountRate : 0;
 
-          const origUnit = tier.concurrentCost || 0;
-          const discUnit = origUnit * (1 - discountRate);
-          const origTotal = origUnit * tier.concurrentQty;
-          const discTotal = discUnit * tier.concurrentQty;
+            const origUnit = tier.concurrentCost || 0;
+            const discUnit = origUnit * (1 - discountRate);
+            const origTotal = origUnit * tier.concurrentQty;
+            const discTotal = discUnit * tier.concurrentQty;
 
-          subtotalOriginal += origTotal;
-          subtotalDiscounted += discTotal;
+            subtotalOriginal += origTotal;
+            subtotalDiscounted += discTotal;
 
-          lineItems.push({
-            id: itemId,
-            type: 'tier-concurrent',
-            label: `${plan.title} · ${tier.label || 'Tier'} (Concurrent Channels)`,
-            note: tier.note,
-            qty: tier.concurrentQty,
-            unitCostOriginal: origUnit,
-            unitCostDiscounted: discUnit,
-            totalOriginal: origTotal,
-            totalDiscounted: discTotal,
-            isDiscountable,
-            sourceRef: tier.id,
-          });
+            lineItems.push({
+              id: itemId,
+              type: 'tier-concurrent',
+              label: `${plan.title} · ${tier.label || 'Tier'} (Concurrent Channels)`,
+              note: tier.note,
+              qty: tier.concurrentQty,
+              unitCostOriginal: origUnit,
+              unitCostDiscounted: discUnit,
+              totalOriginal: origTotal,
+              totalDiscounted: discTotal,
+              isDiscountable,
+              sourceRef: tier.id,
+            });
+          }
         }
-      }
+      });
     });
-  });
+  }
 
   // Process Add-ons
-  if (quote.showAddonsSection !== false) {
+  if (quote.showAddonsSection !== false && quote.addons) {
     quote.addons.forEach((addon) => {
       if (addon.selected && addon.cost > 0) {
         const itemId = addon.id;
@@ -189,7 +187,7 @@ export function calculateQuoteLineItems(quote: QuoteData): {
   }
 
   // Process Custom Professional Services
-  if (quote.showServicesSection !== false) {
+  if (quote.showServicesSection !== false && quote.customServices) {
     quote.customServices.forEach((service) => {
       if (service.cost > 0 && service.qty > 0) {
         const itemId = service.id;
@@ -278,564 +276,401 @@ export function calculateQuoteLineItems(quote: QuoteData): {
   };
 }
 
-// 1. EDITABLE VECTOR PDF EXPORT WITH THEME & WATERMARK SUPPORT
+// EDITABLE MODERN PREMIUM SALES PROPOSAL VECTOR PDF EXPORT
 export function exportToPdf(quote: QuoteData): void {
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
+  try {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
 
-  const calc = calculateQuoteLineItems(quote);
-  const currency = quote.customerInfo.currency || 'USD';
-  const creator = quote.creatorContactInfo;
-  const themeKey = quote.themePreset || 'slate-teal';
-  const theme = PROPOSAL_THEMES[themeKey] || PROPOSAL_THEMES['slate-teal'];
-  const primaryRgb = hexToRgb(theme.primaryColor);
-  const accentRgb = hexToRgb(theme.accentColor);
+    const calc = calculateQuoteLineItems(quote);
+    const currency = quote.customerInfo.currency || 'USD';
 
-  // Draw Watermark on Page
-  const drawWatermark = () => {
-    if (!quote.watermarkSettings.enabled) return;
+    // Ensure Creator Info has complete fallback data
+    const creator: CreatorContactInfo = quote.creatorContactInfo || {
+      authorName: quote.customerInfo.preparedBy || 'TestGrid Solutions Advisory',
+      authorRole: quote.customerInfo.preparedByTitle || 'Senior Enterprise Solutions Architect',
+      department: 'Solutions Engineering & Advisory',
+      authorEmail: quote.customerInfo.preparedByEmail || 'sales@testgrid.io',
+      authorPhone: '+1 (800) 555-8378',
+      companyWebsite: 'https://testgrid.io',
+      supportEmail: 'support@testgrid.io',
+    };
 
-    doc.saveGraphicsState();
-    if (quote.watermarkSettings.mode === 'image' && quote.watermarkSettings.imageUrl) {
-      try {
-        // Draw image watermark centered
-        const imgWidth = quote.watermarkSettings.imageWidth || 100;
-        const imgHeight = imgWidth * 0.4;
-        const xPos = (210 - imgWidth) / 2;
-        const yPos = (297 - imgHeight) / 2;
-        
-        doc.addImage(
-          quote.watermarkSettings.imageUrl,
-          'PNG',
-          xPos,
-          yPos,
-          imgWidth,
-          imgHeight,
-          undefined,
-          'FAST'
-        );
-      } catch (e) {
-        console.warn('Failed to render image watermark in PDF', e);
-      }
-    } else {
-      // Text Watermark
-      const watermarkColor = hexToRgb(quote.watermarkSettings.color || theme.primaryColor);
-      doc.setTextColor(watermarkColor[0], watermarkColor[1], watermarkColor[2]);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(26);
-      doc.text(quote.watermarkSettings.text || 'CONFIDENTIAL ESTIMATE', 105, 140, {
-        align: 'center',
-        angle: quote.watermarkSettings.angle || -20,
-      });
-      if (quote.watermarkSettings.subtext) {
-        doc.setFontSize(13);
-        doc.text(quote.watermarkSettings.subtext, 105, 152, {
-          align: 'center',
-          angle: quote.watermarkSettings.angle || -20,
-        });
-      }
-    }
-    doc.restoreGraphicsState();
-  };
+    // Modern Light Theme Palette RGB Colors
+    const primaryRgb: [number, number, number] = [15, 23, 42]; // Slate 900
+    const headerBlueRgb: [number, number, number] = [30, 41, 59]; // Slate Navy Header
+    const accentPurpleRgb: [number, number, number] = [139, 92, 246]; // Modern Purple
+    const accentTealRgb: [number, number, number] = [20, 184, 166]; // Light Teal
+    const accentPinkRgb: [number, number, number] = [236, 72, 153]; // Modern Pink
 
-  drawWatermark();
+    // Helper: Draw Header Bar on any page
+    const drawPageHeader = (pdfDoc: jsPDF) => {
+      // Header dark slate base
+      pdfDoc.setFillColor(headerBlueRgb[0], headerBlueRgb[1], headerBlueRgb[2]);
+      pdfDoc.rect(0, 0, 210, 24, 'F');
 
-  // Draw Header Bar with Theme
-  doc.setFillColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-  doc.rect(0, 0, 210, 26, 'F');
+      // Title Brand
+      pdfDoc.setFont('helvetica', 'bold');
+      pdfDoc.setFontSize(18);
+      pdfDoc.setTextColor(255, 255, 255);
+      pdfDoc.text('TestGrid', 14, 15);
 
-  // Embed Custom Logo if present, otherwise render clean brand text
-  let headerTextX = 14;
-  if (quote.customerInfo.logoUrl) {
-    try {
-      doc.addImage(quote.customerInfo.logoUrl, 'PNG', 12, 4, 38, 18, undefined, 'FAST');
-      headerTextX = 54;
-    } catch (e) {
-      console.warn('Could not render logo in PDF', e);
-    }
-  }
+      pdfDoc.setFontSize(11);
+      pdfDoc.setTextColor(accentTealRgb[0], accentTealRgb[1], accentTealRgb[2]);
+      pdfDoc.text('Enterprise', 42, 15);
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(255, 255, 255);
-  doc.text(quote.customerInfo.companyName || 'TestGrid Labs Inc.', headerTextX, 16);
+      pdfDoc.setFontSize(8.5);
+      pdfDoc.setTextColor(226, 232, 240);
+      pdfDoc.text('COMMERCIAL PROPOSAL & ESTIMATE', 196, 15, { align: 'right' });
 
-  doc.setFontSize(9);
-  doc.setTextColor(220, 225, 235);
-  doc.text('OFFICIAL COMMERCIAL PROPOSAL', 196, 16, { align: 'right' });
+      // Multi-color modern gradient accent bar (Blue -> Purple -> Pink -> Teal)
+      pdfDoc.setFillColor(59, 130, 246); // Blue
+      pdfDoc.rect(0, 24, 52.5, 1.2, 'F');
+      pdfDoc.setFillColor(139, 92, 246); // Purple
+      pdfDoc.rect(52.5, 24, 52.5, 1.2, 'F');
+      pdfDoc.setFillColor(236, 72, 153); // Pink
+      pdfDoc.rect(105, 24, 52.5, 1.2, 'F');
+      pdfDoc.setFillColor(20, 184, 166); // Teal
+      pdfDoc.rect(157.5, 24, 52.5, 1.2, 'F');
+    };
 
-  // Metadata Block (Customer & Details)
-  doc.setFontSize(8.5);
-  doc.setTextColor(40, 45, 60);
+    // Draw Page 1 Header
+    drawPageHeader(doc);
 
-  // Left Column (Customer)
-  doc.setFont('helvetica', 'bold');
-  doc.text('PREPARED FOR:', 14, 34);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Customer Name: ${quote.customerInfo.customerName || 'N/A'}`, 14, 39);
-  doc.text(`Customer Email: ${quote.customerInfo.customerEmail || 'N/A'}`, 14, 44);
-  doc.text(`Vendor: ${quote.customerInfo.companyName || 'TestGrid Inc.'}`, 14, 49);
+    // 2. Client & Metadata Details Card (3 Columns with Soft Indigo/Purple Border)
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(221, 214, 254); // Purple 200
+    doc.roundedRect(14, 30, 182, 36, 3, 3, 'FD');
 
-  // Right Column (Quote Metadata)
-  doc.setFont('helvetica', 'bold');
-  doc.text('QUOTE METADATA:', 125, 34);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Quote Ref #: ${quote.customerInfo.quoteNumber || 'TG-QUOTE'}`, 125, 39);
-  doc.text(`Issue Date: ${quote.customerInfo.date}`, 125, 44);
-  doc.text(`Validity Period: ${quote.customerInfo.validityDays}`, 125, 49);
-  doc.text(`Prepared By: ${quote.customerInfo.preparedBy || 'Sales Engineering'}`, 125, 54);
-  doc.text(`Billing Term: ${calc.commitmentYears} Yr(s) Commitment`, 125, 59);
-
-  // Prepare Table Data
-  const tableRows = calc.lineItems.map((item) => {
-    const noteText = item.note ? `\nNote: ${item.note}` : '';
-    const discountNote = !item.isDiscountable ? ' (Exempt from discount)' : '';
-    return [
-      `${item.label}${discountNote}${noteText}`,
-      item.qty.toString(),
-      formatCurrencyVal(item.unitCostDiscounted, currency),
-      formatCurrencyVal(item.totalDiscounted, currency),
-    ];
-  });
-
-  if (tableRows.length === 0) {
-    tableRows.push(['No core licenses or add-ons selected', '0', '$0', '$0']);
-  }
-
-  // AutoTable
-  // @ts-expect-error autoTable plugin attaches to jsPDF
-  doc.autoTable({
-    startY: 65,
-    head: [['ITEM DESCRIPTION', 'QTY', 'UNIT PRICE', 'SUBTOTAL']],
-    body: tableRows,
-    headStyles: {
-      fillColor: primaryRgb,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 8.5,
-    },
-    styles: {
-      font: 'helvetica',
-      fontSize: 8,
-      cellPadding: 3,
-      textColor: [35, 40, 55],
-    },
-    columnStyles: {
-      0: { cellWidth: 100 },
-      1: { halign: 'center', cellWidth: 20 },
-      2: { halign: 'right', cellWidth: 32 },
-      3: { halign: 'right', cellWidth: 30 },
-    },
-    didDrawPage: () => {
-      drawWatermark();
-    },
-  });
-
-  // @ts-expect-error autoTable stores finalY
-  const finalY = (doc.lastAutoTable?.finalY || 120) + 6;
-
-  // Financial & Payment Schedule Summary Box
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, finalY, 182, 36, 2, 2, 'FD');
-
-  // Left side: Investment Totals
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(70, 80, 95);
-  doc.text(`Subtotal Original: ${formatCurrencyVal(calc.subtotalOriginal, currency)}`, 20, finalY + 8);
-  if (calc.discountAmount > 0) {
-    doc.text(`Annual Discount (${quote.discountSettings.rate}%): -${formatCurrencyVal(calc.discountAmount, currency)}`, 20, finalY + 14);
-  }
-
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-  doc.text(`ANNUAL CONTRACT VALUE (ACV): ${formatCurrencyVal(calc.grandTotal, currency)} ${currency}`, 20, finalY + 23);
-
-  if (calc.commitmentYears > 1) {
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 110, 130);
-    doc.text(`Total Multi-Year Value (${calc.commitmentYears} Yrs): ${formatCurrencyVal(calc.multiYearTotal, currency)} ${currency}`, 20, finalY + 30);
-  }
-
-  // Right side: Payment Schedule & Installment Breakdown
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-  doc.text(`PAYMENT SCHEDULE: ${calc.paymentScheduleStr.toUpperCase()}`, 115, finalY + 8);
-
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(70, 80, 95);
-  doc.text(`Schedule Type: ${calc.paymentScheduleStr}`, 115, finalY + 14);
-  doc.text(`Installment Amount: ${formatCurrencyVal(calc.installmentAmount, currency)} ${currency}`, 115, finalY + 20);
-  doc.text(`(${calc.installmentLabel})`, 115, finalY + 25);
-  doc.text(`Payment Terms: ${quote.customerInfo.paymentTerms || 'Net 30 Days'}`, 115, finalY + 30);
-
-  // Legal Disclaimer
-  const disclaimerY = finalY + 42;
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(120, 130, 145);
-
-  const disclaimerLines = doc.splitTextToSize(
-    quote.disclaimerNotice || 'CONFIDENTIAL - TestGrid Pricing Proposal. Valid for 30 days.',
-    182
-  );
-  doc.text(disclaimerLines, 14, disclaimerY);
-
-  // Creator & Advisory Contact Information Block
-  if (creator) {
-    const footerY = disclaimerY + (disclaimerLines.length * 3) + 6;
-    doc.setFillColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-    doc.rect(14, footerY, 182, 16, 'F');
+    // Column 1: Client Info
+    doc.setFontSize(7.5);
+    doc.setTextColor(139, 92, 246); // Purple Accent Header
+    doc.setFont('helvetica', 'bold');
+    doc.text('PREPARED FOR CLIENT', 18, 37);
 
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text(quote.customerInfo.customerName || 'Valued Enterprise Client', 18, 43);
+
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
+    doc.setTextColor(51, 65, 85);
+    doc.text(`Contact: ${quote.customerInfo.customerEmail || 'N/A'}`, 18, 49);
+    doc.text(`Organization: ${quote.customerInfo.companyName || 'TestGrid Partner'}`, 18, 55);
+    doc.text(`Payment Terms: ${quote.customerInfo.paymentTerms || 'Net 30 Days'}`, 18, 61);
+
+    // Column 2: Provider & Representative Info
+    doc.setFontSize(7.5);
+    doc.setTextColor(20, 184, 166); // Teal Accent Header
+    doc.setFont('helvetica', 'bold');
+    doc.text('ISSUING PROVIDER ENTITY', 82, 37);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text('TestGrid Labs Inc.', 82, 43);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(51, 65, 85);
+    doc.text(`Lead: ${creator.authorName}`, 82, 49);
+    doc.text(`Title: ${creator.authorRole}`, 82, 55);
+    doc.text(`Email: ${creator.authorEmail}`, 82, 61);
+
+    // Column 3: Proposal Commercial Metadata
+    doc.setFontSize(7.5);
+    doc.setTextColor(236, 72, 153); // Pink Accent Header
+    doc.setFont('helvetica', 'bold');
+    doc.text('PROPOSAL METADATA', 148, 37);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(139, 92, 246);
+    doc.text(`Ref: ${quote.customerInfo.quoteNumber || 'TG-QUOTE'}`, 148, 43);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(51, 65, 85);
+    doc.text(`Issue Date: ${quote.customerInfo.date}`, 148, 49);
+    doc.text(`Validity: ${quote.customerInfo.validityDays}`, 148, 55);
+    doc.text(`Contract Term: ${calc.commitmentYears} Year(s)`, 148, 61);
+
+    // 3. Prepare Line Items Table
+    const tableRows = calc.lineItems.map((item) => {
+      const noteText = item.note ? `\nNote: ${item.note}` : '';
+      const discountNote = !item.isDiscountable ? ' (Discount Exempt)' : '';
+      return [
+        `${item.label}${discountNote}${noteText}`,
+        item.qty.toString(),
+        formatCurrencyVal(item.unitCostDiscounted, currency),
+        formatCurrencyVal(item.totalDiscounted, currency),
+      ];
+    });
+
+    if (tableRows.length === 0) {
+      tableRows.push(['No core licenses or add-ons selected', '0', '$0', '$0']);
+    }
+
+    // 4. Render Itemized Pricing AutoTable
+    autoTable(doc, {
+      startY: 71,
+      head: [['COMMERCIAL ITEM DESCRIPTION', 'QTY', 'UNIT PRICE', 'SUBTOTAL']],
+      body: tableRows,
+      headStyles: {
+        fillColor: primaryRgb,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 8.5,
+        cellPadding: 4,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      styles: {
+        font: 'helvetica',
+        fontSize: 8,
+        cellPadding: 3.5,
+        textColor: [30, 41, 59],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.1,
+      },
+      columnStyles: {
+        0: { cellWidth: 102 },
+        1: { halign: 'center', cellWidth: 18 },
+        2: { halign: 'right', cellWidth: 32 },
+        3: { halign: 'right', cellWidth: 30 },
+      },
+      didDrawPage: (data) => {
+        if (data.pageNumber > 1) {
+          drawPageHeader(doc);
+        }
+      },
+    });
+
+    // Layout management
+    // @ts-expect-error autoTable attaches finalY
+    let currentY = (doc.lastAutoTable?.finalY || 120) + 6;
+    const pageMaxY = 270;
+
+    function ensureSpace(neededHeight: number) {
+      if (currentY + neededHeight > pageMaxY) {
+        doc.addPage();
+        drawPageHeader(doc);
+        currentY = 30;
+      }
+    }
+
+    // 5. Executive Financial Investment Summary Box
+    ensureSpace(46);
+
+    doc.setFillColor(15, 23, 42); // Dark Slate Indigo Card
+    doc.setDrawColor(30, 41, 59);
+    doc.roundedRect(14, currentY, 182, 44, 3, 3, 'FD');
+
+    // Gradient accent bar on left of investment card
+    doc.setFillColor(236, 72, 153); // Pink
+    doc.rect(14, currentY, 2.5, 44, 'F');
+
+    // Left Box Column - Commercial Investment Totals
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20, 184, 166); // Light Teal Accent
+    doc.text('TOTAL CONTRACT INVESTMENT SUMMARY', 20, currentY + 8);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(203, 213, 225);
+    doc.text(`Base List Price Subtotal: ${formatCurrencyVal(calc.subtotalOriginal, currency)}`, 20, currentY + 15);
+
+    if (calc.discountAmount > 0) {
+      doc.setTextColor(52, 211, 153); // Emerald Green Savings
+      doc.text(
+        `Applied Commercial Discount (${quote.discountSettings.rate}%): -${formatCurrencyVal(calc.discountAmount, currency)}`,
+        20,
+        currentY + 21
+      );
+    } else {
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Applied Commercial Discount: Standard List Price`, 20, currentY + 21);
+    }
+
+    doc.setFontSize(11.5);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text(`PROPOSAL ISSUED BY: ${creator.authorName}  ·  ${creator.authorRole} (${creator.department || 'Advisory'})`, 18, footerY + 6);
+    doc.text(`ANNUAL VALUE (ACV): ${formatCurrencyVal(calc.grandTotal, currency)} ${currency}`, 20, currentY + 30);
+
+    if (calc.commitmentYears > 1) {
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Multi-Year Contract Value (${calc.commitmentYears} Yrs): ${formatCurrencyVal(calc.multiYearTotal, currency)} ${currency}`, 20, currentY + 37);
+    } else {
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(148, 163, 184);
+      doc.text(`1-Year Subscription Commitment`, 20, currentY + 37);
+    }
+
+    // Right Box Column - Payment & Billing Schedule
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(139, 92, 246); // Purple Accent
+    doc.text('PAYMENT SCHEDULE & BILLING TERMS', 115, currentY + 8);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(203, 213, 225);
+    doc.text(`Billing Cadence: ${quote.discountSettings.billingCycle === 'monthly' ? 'Monthly' : 'Annual Contract'}`, 115, currentY + 15);
+    doc.text(`Payment Schedule: ${calc.paymentScheduleStr}`, 115, currentY + 21);
+    doc.text(`Installment: ${formatCurrencyVal(calc.installmentAmount, currency)} ${currency} (${calc.installmentLabel})`, 115, currentY + 27);
+    doc.text(`Invoicing Term: ${quote.customerInfo.paymentTerms || 'Net 30 Days'}`, 115, currentY + 33);
+    doc.text(`Currency: Base ${currency}`, 115, currentY + 39);
+
+    currentY += 50;
+
+    // 6. Commercial Terms & Stipulations Box
+    const disclaimerLines = doc.splitTextToSize(
+      quote.disclaimerNotice || 'CONFIDENTIAL - TestGrid Commercial Proposal. Valid for 30 days from issue date.',
+      178
+    );
+    const disclaimerBoxHeight = Math.max(22, disclaimerLines.length * 3.5 + 10);
+
+    ensureSpace(disclaimerBoxHeight + 4);
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, currentY, 182, disclaimerBoxHeight, 2, 2, 'FD');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(71, 85, 105);
+    doc.text('COMMERCIAL TERMS & STIPULATIONS', 18, currentY + 6);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
-    doc.setTextColor(225, 230, 240);
+    doc.setTextColor(100, 116, 139);
+    doc.text(disclaimerLines, 18, currentY + 11);
+
+    currentY += disclaimerBoxHeight + 6;
+
+    // 7. Proposal Issued By Section (GUARANTEED TO EXPORT - Height ~26mm)
+    ensureSpace(28);
+
+    doc.setFillColor(245, 243, 255); // Soft Purple Background (#f5f3ff)
+    doc.setDrawColor(221, 214, 254); // Soft Purple Border (#ddd6fe)
+    doc.roundedRect(14, currentY, 182, 24, 3, 3, 'FD');
+
+    // Purple accent bar
+    doc.setFillColor(139, 92, 246);
+    doc.rect(14, currentY, 2.5, 24, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text('PROPOSAL ISSUED BY — ADVISORY CONTACT INFORMATION', 20, currentY + 6);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(139, 92, 246);
+    doc.text(`${creator.authorName}  ·  ${creator.authorRole}`, 20, currentY + 12);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(51, 65, 85);
     doc.text(
-      `Email: ${creator.authorEmail}   |   Phone: ${creator.authorPhone}   |   Web: ${creator.companyWebsite}   |   Support: ${creator.supportEmail}`,
-      18,
-      footerY + 11.5
+      `Department: ${creator.department || 'Solutions Engineering & Advisory'}   |   Email: ${creator.authorEmail}   |   Phone: ${creator.authorPhone}`,
+      20,
+      currentY + 17
     );
-  }
-
-  // Save PDF file
-  const filename = `TestGrid_Quote_${quote.customerInfo.quoteNumber || 'Estimate'}_${
-    quote.customerInfo.customerName ? quote.customerInfo.customerName.replace(/[^a-zA-Z0-9]/g, '_') : 'Client'
-  }.pdf`;
-  doc.save(filename);
-}
-
-// 2. WORD (.DOCX) EXPORT
-export function exportToDocx(quote: QuoteData): void {
-  const calc = calculateQuoteLineItems(quote);
-  const currency = quote.customerInfo.currency || 'USD';
-  const creator = quote.creatorContactInfo;
-
-  const tableRows: TableRow[] = [
-    new TableRow({
-      children: [
-        new TableCell({
-          children: [
-            new Paragraph({
-              children: [new TextRun({ text: 'ITEM DESCRIPTION', bold: true, color: 'FFFFFF', size: 18 })],
-            }),
-          ],
-          shading: { fill: '2C3260' },
-          width: { size: 55, type: WidthType.PERCENTAGE },
-        }),
-        new TableCell({
-          children: [
-            new Paragraph({
-              alignment: AlignmentType.RIGHT,
-              children: [new TextRun({ text: 'QTY', bold: true, color: 'FFFFFF', size: 18 })],
-            }),
-          ],
-          shading: { fill: '2C3260' },
-          width: { size: 15, type: WidthType.PERCENTAGE },
-        }),
-        new TableCell({
-          children: [
-            new Paragraph({
-              alignment: AlignmentType.RIGHT,
-              children: [new TextRun({ text: 'SUBTOTAL', bold: true, color: 'FFFFFF', size: 18 })],
-            }),
-          ],
-          shading: { fill: '2C3260' },
-          width: { size: 30, type: WidthType.PERCENTAGE },
-        }),
-      ],
-    }),
-  ];
-
-  calc.lineItems.forEach((item) => {
-    tableRows.push(
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [
-              new Paragraph({
-                children: [
-                  new TextRun({ text: item.label, bold: true, size: 18, color: '2C3260' }),
-                  !item.isDiscountable ? new TextRun({ text: ' [Exempt from discount]', italics: true, size: 16, color: '94A3B8' }) : new TextRun({ text: '' }),
-                  item.note ? new TextRun({ text: `\nNote: ${item.note}`, italics: true, size: 16, color: '64748B' }) : new TextRun({ text: '' }),
-                ],
-              }),
-            ],
-          }),
-          new TableCell({
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.RIGHT,
-                children: [new TextRun({ text: item.qty.toString(), size: 18 })],
-              }),
-            ],
-          }),
-          new TableCell({
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.RIGHT,
-                children: [new TextRun({ text: formatCurrencyVal(item.totalDiscounted, currency), bold: true, size: 18 })],
-              }),
-            ],
-          }),
-        ],
-      })
+    doc.text(
+      `Website: ${creator.companyWebsite}   |   Technical Support: ${creator.supportEmail}`,
+      20,
+      currentY + 21.5
     );
-  });
 
-  const docChildren: Paragraph[] | Table[] = [
-    new Paragraph({
-      children: [
-        new TextRun({ text: `${quote.customerInfo.companyName || 'TestGrid Inc.'} `, bold: true, size: 32, color: '2C3260' }),
-        new TextRun({ text: '· Commercial Pricing Proposal', size: 24, color: '52BFA3' }),
-      ],
-    }),
-    new Paragraph({ text: '' }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: `Quote Reference: `, bold: true }),
-        new TextRun({ text: quote.customerInfo.quoteNumber }),
-        new TextRun({ text: `   |   Date: `, bold: true }),
-        new TextRun({ text: quote.customerInfo.date }),
-        new TextRun({ text: `   |   Validity: `, bold: true }),
-        new TextRun({ text: quote.customerInfo.validityDays }),
-      ],
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: `Customer Name: `, bold: true }),
-        new TextRun({ text: quote.customerInfo.customerName || 'N/A' }),
-        new TextRun({ text: `   |   Customer Email: `, bold: true }),
-        new TextRun({ text: quote.customerInfo.customerEmail }),
-      ],
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: `Prepared By: `, bold: true }),
-        new TextRun({ text: `${quote.customerInfo.preparedBy}` }),
-        new TextRun({ text: `   |   Schedule: `, bold: true }),
-        new TextRun({ text: `${calc.commitmentYears} Year(s) (${calc.paymentScheduleStr} - ${formatCurrencyVal(calc.installmentAmount, currency)} / installment)` }),
-      ],
-    }),
-    new Paragraph({ text: '' }),
-    new Table({
-      rows: tableRows,
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
-        bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
-        left: { style: BorderStyle.NONE, size: 0, color: 'AUTO' },
-        right: { style: BorderStyle.NONE, size: 0, color: 'AUTO' },
-        insideHorizontal: { style: BorderStyle.DASHED, size: 1, color: 'E2E8F0' },
-        insideVertical: { style: BorderStyle.NONE, size: 0, color: 'AUTO' },
-      },
-    }),
-    new Paragraph({ text: '' }),
-    new Paragraph({
-      alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: `Subtotal: ${formatCurrencyVal(calc.subtotalOriginal, currency)}`, size: 20 })],
-    }),
-    new Paragraph({
-      alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: `Annual Discount (${quote.discountSettings.rate}%): -${formatCurrencyVal(calc.discountAmount, currency)}`, size: 20, color: '685DA7' })],
-    }),
-    new Paragraph({
-      alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: `Annual Contract Value (ACV): ${formatCurrencyVal(calc.grandTotal, currency)} ${currency}`, bold: true, size: 26, color: '2C3260' })],
-    }),
-    new Paragraph({
-      alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: `Payment Schedule (${calc.paymentScheduleStr}): ${formatCurrencyVal(calc.installmentAmount, currency)} / installment`, bold: true, size: 20, color: '52BFA3' })],
-    }),
-  ];
+    // 8. FINAL PASS: DRAW WATERMARK & FOOTERS ON ALL PAGES OVER BACKGROUNDS WITH GSTATE OPACITY
+    // @ts-expect-error jsPDF total pages getter
+    const totalPages = doc.internal.getNumberOfPages();
 
-  if (calc.commitmentYears > 1) {
-    docChildren.push(
-      new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        children: [new TextRun({ text: `Total Multi-Year Value (${calc.commitmentYears} Yrs): ${formatCurrencyVal(calc.multiYearTotal, currency)} ${currency}`, italics: true, size: 20, color: '64748B' })],
-      })
-    );
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      doc.setPage(pageNum);
+
+      // Render Watermark Over Content with Translucent Blend Opacity
+      if (quote.watermarkSettings && quote.watermarkSettings.enabled) {
+        try {
+          let opacityVal = quote.watermarkSettings.opacity;
+          if (typeof opacityVal !== 'number' || isNaN(opacityVal)) opacityVal = 0.18;
+          if (opacityVal > 1) opacityVal = opacityVal / 100;
+          if (opacityVal <= 0) opacityVal = 0.18;
+          // Ensure watermark is reasonably visible (between 0.12 and 0.25)
+          opacityVal = Math.max(0.12, Math.min(0.28, opacityVal));
+
+          // @ts-expect-error jsPDF supports GState
+          if (typeof doc.GState === 'function') {
+            // @ts-expect-error jsPDF supports GState
+            doc.setGState(new doc.GState({ opacity: opacityVal }));
+          }
+
+          if (quote.watermarkSettings.mode === 'image' && quote.watermarkSettings.imageUrl) {
+            const imgUrl = quote.watermarkSettings.imageUrl;
+            const imgWidth = quote.watermarkSettings.imageWidth || 120;
+            const imgHeight = imgWidth * 0.4;
+            const xPos = (210 - imgWidth) / 2;
+            const yPos = (297 - imgHeight) / 2;
+            doc.addImage(imgUrl, 'PNG', xPos, yPos, imgWidth, imgHeight, undefined, 'FAST');
+          } else {
+            const watermarkColor = hexToRgb(quote.watermarkSettings.color || '#8b5cf6');
+            doc.setTextColor(watermarkColor[0], watermarkColor[1], watermarkColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(26);
+            doc.text(quote.watermarkSettings.text || 'TESTGRID · CONFIDENTIAL ESTIMATE', 105, 140, {
+              align: 'center',
+              angle: quote.watermarkSettings.angle !== undefined ? quote.watermarkSettings.angle : -20,
+            });
+            if (quote.watermarkSettings.subtext) {
+              doc.setFontSize(13);
+              doc.text(quote.watermarkSettings.subtext, 105, 155, {
+                align: 'center',
+                angle: quote.watermarkSettings.angle !== undefined ? quote.watermarkSettings.angle : -20,
+              });
+            }
+          }
+
+          // Reset Opacity Back to 1.0 for Footer
+          // @ts-expect-error jsPDF supports GState
+          if (typeof doc.GState === 'function') {
+            // @ts-expect-error jsPDF supports GState
+            doc.setGState(new doc.GState({ opacity: 1.0 }));
+          }
+        } catch (e) {
+          console.warn('Watermark render warning', e);
+        }
+      }
+
+      // Draw Page Number Footer
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        `TestGrid Enterprise Proposal  ·  Ref: ${quote.customerInfo.quoteNumber || 'TG-QUOTE'}  ·  Page ${pageNum} of ${totalPages}`,
+        105,
+        290,
+        { align: 'center' }
+      );
+    }
+
+    // Save PDF
+    const clientClean = quote.customerInfo.customerName
+      ? quote.customerInfo.customerName.replace(/[^a-zA-Z0-9]/g, '_')
+      : 'Client';
+    const filename = `TestGrid_Proposal_${quote.customerInfo.quoteNumber || 'Estimate'}_${clientClean}.pdf`;
+    doc.save(filename);
+  } catch (error) {
+    console.error('Error generating PDF proposal:', error);
+    alert('An error occurred while exporting the PDF. Please check browser console or try again.');
   }
-
-  docChildren.push(
-    new Paragraph({ text: '' }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: quote.watermarkSettings.enabled ? `[ WATERMARK: ${quote.watermarkSettings.text} ]\n` : '', bold: true, size: 16, color: '94A3B8' }),
-        new TextRun({ text: quote.disclaimerNotice, size: 16, color: '64748B' }),
-      ],
-    })
-  );
-
-  if (creator) {
-    docChildren.push(
-      new Paragraph({ text: '' }),
-      new Paragraph({
-        children: [
-          new TextRun({ text: `Issued By: ${creator.authorName} (${creator.authorRole} - ${creator.department || 'Advisory'})\n`, bold: true, size: 18, color: '2C3260' }),
-          new TextRun({ text: `Email: ${creator.authorEmail} | Phone: ${creator.authorPhone} | Website: ${creator.companyWebsite} | Support: ${creator.supportEmail}`, size: 16, color: '64748B' }),
-        ],
-      })
-    );
-  }
-
-  const doc = new Document({
-    sections: [
-      {
-        properties: {},
-        children: docChildren as Paragraph[],
-      },
-    ],
-  });
-
-  Packer.toBlob(doc).then((blob) => {
-    saveAs(
-      blob,
-      `TestGrid_Quote_${quote.customerInfo.quoteNumber || 'Estimate'}_${
-        quote.customerInfo.customerName ? quote.customerInfo.customerName.replace(/[^a-zA-Z0-9]/g, '_') : 'Client'
-      }.docx`
-    );
-  });
-}
-
-// 3. EXCEL (.XLSX) EXPORT
-export function exportToExcel(quote: QuoteData): void {
-  const calc = calculateQuoteLineItems(quote);
-  const currency = quote.customerInfo.currency || 'USD';
-  const creator = quote.creatorContactInfo;
-
-  // Sheet 1: Executive Summary
-  const summaryData = [
-    ['TESTGRID PRICING ESTIMATE & QUOTE'],
-    ['Quote Number', quote.customerInfo.quoteNumber],
-    ['Customer Name', quote.customerInfo.customerName],
-    ['Customer Email', quote.customerInfo.customerEmail],
-    ['Company', quote.customerInfo.companyName],
-    ['Prepared By', quote.customerInfo.preparedBy],
-    ['Date', quote.customerInfo.date],
-    ['Validity', quote.customerInfo.validityDays],
-    ['Payment Terms', quote.customerInfo.paymentTerms],
-    ['Currency', currency],
-    ['Commitment Term', `${calc.commitmentYears} Year(s)`],
-    ['Payment Schedule', calc.paymentScheduleStr],
-    ['Installment Amount', calc.installmentAmount],
-    [],
-    ['FINANCIAL SUMMARY'],
-    ['Original Subtotal', calc.subtotalOriginal],
-    ['Discount Rate', `${quote.discountSettings.rate}%`],
-    ['Discount Amount', calc.discountAmount],
-    ['Annual Contract Value (ACV)', calc.grandTotal],
-    ['Multi-Year Commitment Total', calc.multiYearTotal],
-    [],
-    ['WATERMARK BRANDING', quote.watermarkSettings.enabled ? quote.watermarkSettings.text : 'Disabled'],
-  ];
-
-  if (creator) {
-    summaryData.push([]);
-    summaryData.push(['CREATOR CONTACT INFO']);
-    summaryData.push(['Author Name', creator.authorName]);
-    summaryData.push(['Author Role', creator.authorRole]);
-    summaryData.push(['Department', creator.department || 'Advisory']);
-    summaryData.push(['Email', creator.authorEmail]);
-    summaryData.push(['Phone', creator.authorPhone]);
-    summaryData.push(['Website', creator.companyWebsite]);
-    summaryData.push(['Support', creator.supportEmail]);
-  }
-
-  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-
-  // Sheet 2: Itemized Line Items
-  const itemsData = [
-    ['Item Type', 'Description', 'Quantity', 'Unit Price Original', 'Unit Price Discounted', 'Total Discounted Price', 'Discount Eligible', 'Notes'],
-  ];
-
-  calc.lineItems.forEach((item) => {
-    itemsData.push([
-      item.type,
-      item.label,
-      item.qty.toString(),
-      item.unitCostOriginal.toString(),
-      item.unitCostDiscounted.toString(),
-      item.totalDiscounted.toString(),
-      item.isDiscountable ? 'Yes' : 'No',
-      item.note || '',
-    ]);
-  });
-
-  const itemsSheet = XLSX.utils.aoa_to_sheet(itemsData);
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, summarySheet, 'Quote Summary');
-  XLSX.utils.book_append_sheet(workbook, itemsSheet, 'Line Items');
-
-  const filename = `TestGrid_Quote_${quote.customerInfo.quoteNumber || 'Estimate'}_${
-    quote.customerInfo.customerName ? quote.customerInfo.customerName.replace(/[^a-zA-Z0-9]/g, '_') : 'Client'
-  }.xlsx`;
-
-  XLSX.writeFile(workbook, filename);
-}
-
-// 4. GOOGLE SHEETS EXPORT / CSV COPY
-export function exportToGoogleSheetsCSV(quote: QuoteData): { csvContent: string; tsvClipboard: string } {
-  const calc = calculateQuoteLineItems(quote);
-  const currency = quote.customerInfo.currency || 'USD';
-  const creator = quote.creatorContactInfo;
-
-  const rows = [
-    ['TestGrid Commercial Proposal Export', '', '', '', ''],
-    ['Quote Reference', quote.customerInfo.quoteNumber, '', 'Date', quote.customerInfo.date],
-    ['Customer', quote.customerInfo.customerName, '', 'Prepared By', quote.customerInfo.preparedBy],
-    ['Company', quote.customerInfo.companyName, '', 'Validity', quote.customerInfo.validityDays],
-    ['Currency', currency, '', 'Terms', quote.customerInfo.paymentTerms],
-    ['Commitment Term', `${calc.commitmentYears} Yr(s)`, '', 'Schedule', calc.paymentScheduleStr],
-    ['Installment Amount', formatCurrencyVal(calc.installmentAmount, currency), '', 'Schedule Note', calc.installmentLabel],
-    ['', '', '', '', ''],
-    ['Item Description', 'Qty', 'Unit Price Original', 'Unit Price Discounted', 'Subtotal Discounted'],
-  ];
-
-  calc.lineItems.forEach((item) => {
-    rows.push([
-      item.label + (item.note ? ` (${item.note})` : '') + (!item.isDiscountable ? ' [Exempt]' : ''),
-      item.qty.toString(),
-      item.unitCostOriginal.toString(),
-      item.unitCostDiscounted.toString(),
-      item.totalDiscounted.toString(),
-    ]);
-  });
-
-  rows.push(['', '', '', '', '']);
-  rows.push(['Subtotal Original', '', '', '', calc.subtotalOriginal.toString()]);
-  rows.push([`Discount (${quote.discountSettings.rate}%)`, '', '', '', (-calc.discountAmount).toString()]);
-  rows.push(['Annual Contract Value (ACV)', '', '', '', calc.grandTotal.toString()]);
-  if (calc.commitmentYears > 1) {
-    rows.push([`Multi-Year Total (${calc.commitmentYears} Yrs)`, '', '', '', calc.multiYearTotal.toString()]);
-  }
-
-  if (creator) {
-    rows.push(['', '', '', '', '']);
-    rows.push(['Prepared By', creator.authorName, `${creator.authorRole} (${creator.department || 'Advisory'})`, creator.authorEmail, creator.companyWebsite]);
-  }
-
-  if (quote.watermarkSettings.enabled) {
-    rows.push(['', '', '', '', '']);
-    rows.push(['Watermark Note', quote.watermarkSettings.text, '', '', '']);
-  }
-
-  const csvContent = rows.map((r) => r.map((cell) => `"${(cell || '').replace(/"/g, '""')}"`).join(',')).join('\n');
-  const tsvClipboard = rows.map((r) => r.join('\t')).join('\n');
-
-  return { csvContent, tsvClipboard };
 }

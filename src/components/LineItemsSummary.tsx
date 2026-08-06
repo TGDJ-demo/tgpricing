@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { QuoteData, DiscountSettings, CreatorContactInfo } from '../types';
-import { calculateQuoteLineItems, formatCurrencyVal, exportToPdf, exportToDocx, exportToExcel } from '../utils/exportUtils';
-import { PROPOSAL_THEMES } from '../data/themes';
+import { calculateQuoteLineItems, formatCurrencyVal, exportToPdf } from '../utils/exportUtils';
+import { Tooltip } from './Tooltip';
 import {
   Tag,
   Percent,
   PiggyBank,
-  FileText,
-  Printer,
   ShieldAlert,
   Calendar,
   UserCheck,
@@ -19,7 +17,7 @@ import {
   Download,
   X,
   CreditCard,
-  ChevronDown,
+  FileCheck,
 } from 'lucide-react';
 
 interface LineItemsSummaryProps {
@@ -28,7 +26,7 @@ interface LineItemsSummaryProps {
   onChangeDisclaimer: (text: string) => void;
   onChangeCreatorInfo?: (creator: CreatorContactInfo) => void;
   onExcludeLineItem: (itemId: string) => void;
-  onOpenGoogleSheetsModal: () => void;
+  onOpenGoogleSheetsModal?: () => void;
   currencyCode: string;
 }
 
@@ -38,12 +36,9 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
   onChangeDisclaimer,
   onChangeCreatorInfo,
   onExcludeLineItem,
-  onOpenGoogleSheetsModal,
   currencyCode,
 }) => {
-  const [showMoreExports, setShowMoreExports] = useState(false);
   const calc = calculateQuoteLineItems(quote);
-  const theme = PROPOSAL_THEMES[quote.themePreset || 'slate-teal'] || PROPOSAL_THEMES['slate-teal'];
 
   const handleToggleBillingCycle = (cycle: 'annual' | 'monthly') => {
     onChangeDiscount({
@@ -86,21 +81,26 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
   return (
     <div className="space-y-6">
       {/* 1. Itemized Line Items Table Box */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-            <Tag className="w-4 h-4 text-teal-600" /> Commercial Line Item Summary
-          </h3>
-          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
-            {calc.lineItems.length} Active Items
+      <div className="bg-white border border-purple-100 rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-indigo-50 pb-3">
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+              <Tag className="w-4 h-4 text-purple-600" /> Commercial Line Item Summary
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-0.5">
+              Review itemized license totals and individual line items included in this proposal
+            </p>
+          </div>
+          <span className="text-xs font-bold text-purple-950 bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-xl shadow-2xs">
+            {calc.lineItems.length} Line Item(s) Selected
           </span>
         </div>
 
-        <div className="grid grid-cols-12 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-2 px-1">
-          <span className="col-span-6 sm:col-span-6">Description</span>
+        <div className="grid grid-cols-12 text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200 pb-2 px-1">
+          <span className="col-span-6 sm:col-span-6">Line Item Description</span>
           <span className="col-span-2 text-center">Qty</span>
           <span className="col-span-3 sm:col-span-3 text-right">Subtotal</span>
-          <span className="col-span-1 text-center">Delete</span>
+          <span className="col-span-1 text-center">Action</span>
         </div>
 
         {calc.lineItems.length === 0 ? (
@@ -108,42 +108,43 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
             No line items selected yet. Select devices, browsers, or add-ons above.
           </div>
         ) : (
-          <div className="space-y-2 divide-y divide-slate-100">
+          <div className="space-y-2.5 divide-y divide-slate-100">
             {calc.lineItems.map((item) => (
               <div
                 key={item.id}
-                className="grid grid-cols-12 items-center text-xs text-slate-800 pt-2 px-1 hover:bg-slate-50/50 rounded-lg transition"
+                className="grid grid-cols-12 items-center text-xs text-slate-800 pt-2.5 px-1 hover:bg-slate-50/80 rounded-lg transition"
               >
                 <div className="col-span-6 sm:col-span-6 flex flex-col pr-2">
-                  <span className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap leading-relaxed">
                     {item.label}
                     {!item.isDiscountable && (
-                      <span className="text-[10px] font-semibold bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">
+                      <span className="text-[10px] font-bold bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">
                         Discount Exempt
                       </span>
                     )}
                   </span>
                   {item.note && (
-                    <span className="text-[11px] text-slate-500 italic pl-1">
+                    <span className="text-[11px] text-slate-500 italic pl-1 leading-relaxed">
                       Note: {item.note}
                     </span>
                   )}
                 </div>
-                <div className="col-span-2 text-center font-mono font-bold text-slate-700">
+                <div className="col-span-2 text-center font-mono font-bold text-slate-800">
                   {item.qty}
                 </div>
                 <div className="col-span-3 sm:col-span-3 text-right font-mono font-bold text-slate-900">
                   {formatCurrencyVal(item.totalDiscounted, currencyCode)}
                 </div>
                 <div className="col-span-1 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => onExcludeLineItem(item.id)}
-                    className="w-6 h-6 rounded-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 border border-red-200 flex items-center justify-center transition"
-                    title="Remove item"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                  <Tooltip content="Remove or exclude this line item from totals" position="left">
+                    <button
+                      type="button"
+                      onClick={() => onExcludeLineItem(item.id)}
+                      className="w-6 h-6 rounded-md bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center transition shadow-2xs"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             ))}
@@ -151,74 +152,85 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
         )}
 
         {/* Subtotal Summary Footer */}
-        <div className="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-slate-700">
+        <div className="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-slate-700">
           <div>
-            Base Subtotal:{' '}
-            <span className="font-mono text-slate-900">
+            Base List Subtotal:{' '}
+            <span className="font-mono text-slate-900 font-bold">
               {formatCurrencyVal(calc.subtotalOriginal, currencyCode)}
             </span>
           </div>
           {calc.discountAmount > 0 && (
-            <div className="text-teal-700">
-              Applied Discount ({quote.discountSettings.rate}%): -
+            <div className="text-teal-800">
+              Applied Commercial Discount ({quote.discountSettings.rate}%): -
               <span className="font-mono font-bold">
                 {formatCurrencyVal(calc.discountAmount, currencyCode)}
               </span>
             </div>
           )}
-          <div className="text-sm font-bold text-slate-900">
-            Net Total:{' '}
-            <span className="font-mono text-base text-[#2c3260]">
+          <div className="text-sm font-black text-slate-900">
+            Net Investment Total:{' '}
+            <span className="font-mono text-base text-slate-900 font-extrabold">
               {formatCurrencyVal(calc.subtotalDiscounted, currencyCode)}
             </span>
           </div>
         </div>
       </div>
 
-      {/* 2. Multi-Year & Payment Schedule Controls (Requirement 8) */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 border-b border-slate-100 pb-2">
-          <CreditCard className="w-4 h-4 text-emerald-600" /> Contract Term & Payment Schedule
-        </h3>
+      {/* 2. Commercial Terms & Payment Schedule Controls */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
+        <div>
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-teal-600" /> Commercial Structure & Multi-Year Payment Terms
+          </h3>
+          <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-0.5">
+            Configure multi-year commitment duration, annual discount incentives, and payment schedule
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Billing Cycle */}
-          <div className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
+          {/* Billing Cadence */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
               Billing Cadence
             </span>
-            <div className="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => handleToggleBillingCycle('annual')}
-                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition text-center ${
-                  quote.discountSettings.billingCycle === 'annual'
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Annual Billing
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleBillingCycle('monthly')}
-                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition text-center ${
-                  quote.discountSettings.billingCycle === 'monthly'
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Monthly (0% Disc)
-              </button>
+            <div className="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center gap-1 shadow-2xs">
+              <Tooltip content="Annual subscription billing with custom discount eligibility" position="top" className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => handleToggleBillingCycle('annual')}
+                  className={`w-full py-1.5 px-2 rounded-lg text-xs font-bold transition text-center ${
+                    quote.discountSettings.billingCycle === 'annual'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Annual Billing
+                </button>
+              </Tooltip>
+              <Tooltip content="Monthly subscription cadence without annual discount incentives" position="top" className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => handleToggleBillingCycle('monthly')}
+                  className={`w-full py-1.5 px-2 rounded-lg text-xs font-bold transition text-center ${
+                    quote.discountSettings.billingCycle === 'monthly'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Monthly (0% Disc)
+                </button>
+              </Tooltip>
             </div>
           </div>
 
           {/* Discount Rate Input */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
-              <Percent className="w-3.5 h-3.5 text-teal-600" /> Discount Rate
-            </label>
-            <div className="flex items-center bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5">
+          <div className="space-y-1.5">
+            <Tooltip content="Set percentage discount applied to eligible subscription line items" position="top">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1 cursor-pointer">
+                <Percent className="w-3.5 h-3.5 text-teal-600" /> Commercial Discount Rate
+              </label>
+            </Tooltip>
+            <div className="flex items-center bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 shadow-2xs">
               <input
                 type="number"
                 min="0"
@@ -234,14 +246,16 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
           </div>
 
           {/* Multi-Year Commitment Term */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-indigo-600" /> Commitment Term
-            </label>
+          <div className="space-y-1.5">
+            <Tooltip content="Select contract term duration in years" position="top">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1 cursor-pointer">
+                <Calendar className="w-3.5 h-3.5 text-teal-600" /> Contract Duration
+              </label>
+            </Tooltip>
             <select
               value={quote.discountSettings.commitmentYears || 1}
               onChange={(e) => handleCommitmentYearsChange(parseInt(e.target.value, 10) || 1)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 outline-none cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none cursor-pointer shadow-2xs"
             >
               <option value={1}>1 Year Term</option>
               <option value={2}>2 Years Multi-Year</option>
@@ -250,11 +264,13 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
             </select>
           </div>
 
-          {/* Payment Schedule Option (Upfront, Annually, Bi-annually) */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
-              <PiggyBank className="w-3.5 h-3.5 text-emerald-600" /> Payment Schedule
-            </label>
+          {/* Payment Schedule Option */}
+          <div className="space-y-1.5">
+            <Tooltip content="Select invoice installment payment frequency" position="top">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1 cursor-pointer">
+                <PiggyBank className="w-3.5 h-3.5 text-teal-600" /> Payment Schedule
+              </label>
+            </Tooltip>
             <select
               value={quote.discountSettings.paymentSchedule || 'Annually'}
               onChange={(e) =>
@@ -262,7 +278,7 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
                   e.target.value as 'Upfront' | 'Annually' | 'Bi-annually' | 'Quarterly' | 'Monthly'
                 )
               }
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 outline-none cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none cursor-pointer shadow-2xs"
             >
               <option value="Upfront">Upfront (100% at Signing)</option>
               <option value="Annually">Annually (1x / Year)</option>
@@ -274,33 +290,30 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
         </div>
       </div>
 
-      {/* 3. Executive Financial Investment Card (Requirement 8 - ACV, TCV, Installment Amount) */}
-      <div
-        className="rounded-2xl p-6 text-white shadow-md border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition"
-        style={{ backgroundColor: theme.primaryColor }}
-      >
-        <div className="space-y-1.5">
+      {/* 3. Executive Financial Investment Card */}
+      <div className="rounded-2xl p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 text-white shadow-xl shadow-indigo-950/20 border border-purple-800/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition">
+        <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-widest text-teal-400 bg-white/10 px-2.5 py-0.5 rounded-md">
-              Total Contract Summary
+            <span className="text-xs font-black uppercase tracking-widest text-pink-300 bg-pink-950/80 border border-pink-700/80 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+              <FileCheck className="w-3.5 h-3.5 text-pink-400" /> Total Contract Value Summary
             </span>
             {calc.discountAmount > 0 && (
-              <span className="text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                Save {formatCurrencyVal(calc.discountAmount, currencyCode)} ({calc.effectiveDiscountRate.toFixed(1)}% Off)
+              <span className="text-xs font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-md">
+                Savings: {formatCurrencyVal(calc.discountAmount, currencyCode)} ({calc.effectiveDiscountRate.toFixed(1)}% Discount)
               </span>
             )}
           </div>
 
           {/* Annual Value (ACV) */}
-          <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight pt-1">
+          <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white pt-1">
             {formatCurrencyVal(calc.grandTotal, currencyCode)}{' '}
-            <span className="text-xs font-bold text-slate-300 font-sans uppercase">
-              {currencyCode} / Annual Contract Value
+            <span className="text-xs font-bold text-slate-300 font-sans uppercase tracking-wider">
+              {currencyCode} / Annual Contract Value (ACV)
             </span>
           </div>
 
           {/* Multi-Year TCV & Installment Breakdown */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-slate-200 font-medium pt-1">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-slate-300 font-semibold pt-1">
             <div>
               Total Multi-Year Value ({calc.commitmentYears} Yrs):{' '}
               <strong className="text-white font-mono font-bold text-sm">
@@ -317,72 +330,28 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
           </div>
         </div>
 
-        {/* Primary Single PDF Export Action (Requirement 1) */}
-        <div className="flex flex-col sm:flex-row md:flex-col items-stretch gap-2 shrink-0 w-full md:w-auto">
-          <button
-            type="button"
-            onClick={() => exportToPdf(quote)}
-            className="px-6 py-3.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-lg transition"
-          >
-            <Download className="w-4 h-4 text-slate-950" /> Export Proposal (PDF)
-          </button>
-
-          <div className="relative">
+        {/* Primary Single PDF Export Action */}
+        <div className="shrink-0 w-full md:w-auto">
+          <Tooltip content="Generate and download high-resolution PDF sales proposal document" position="left">
             <button
               type="button"
-              onClick={() => setShowMoreExports(!showMoreExports)}
-              className="w-full py-1.5 px-3 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 transition"
+              onClick={() => exportToPdf(quote)}
+              className="w-full md:w-auto px-7 py-4 bg-gradient-to-r from-teal-400 via-indigo-500 to-pink-500 hover:from-teal-300 hover:to-pink-400 text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-lg shadow-pink-500/25 transition transform active:scale-98 cursor-pointer"
             >
-              <span>Other Export Formats (Word / Excel)</span>
-              <ChevronDown className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4 text-white" /> Export Proposal (PDF)
             </button>
-
-            {showMoreExports && (
-              <div className="absolute right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-200 p-2 text-slate-800 z-30 space-y-1 animate-in fade-in zoom-in-95 duration-150">
-                <button
-                  type="button"
-                  onClick={() => {
-                    exportToDocx(quote);
-                    setShowMoreExports(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-slate-100 rounded-lg flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4 text-indigo-600" /> Export Word Document (.docx)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    exportToExcel(quote);
-                    setShowMoreExports(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-slate-100 rounded-lg flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4 text-emerald-600" /> Export Excel Sheet (.xlsx)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenGoogleSheetsModal();
-                    setShowMoreExports(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-slate-100 rounded-lg flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4 text-amber-600" /> Copy for Google Sheets / CSV
-                </button>
-              </div>
-            )}
-          </div>
+          </Tooltip>
         </div>
       </div>
 
-      {/* 4. Creator Contact Information in Footer (Requirement 4: Name, Email, Department, Phone) */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 border-b border-slate-100 pb-2">
-          <UserCheck className="w-4 h-4 text-teal-600" /> Proposal Issued By — Advisory Contact Information
+      {/* 4. Creator Contact Information in Footer */}
+      <div className="bg-white border border-purple-100 rounded-2xl p-5 shadow-xs space-y-3">
+        <label className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2 border-b border-indigo-50 pb-2">
+          <UserCheck className="w-4 h-4 text-purple-600" /> Proposal Issued By — Advisory Contact Information
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {/* Author Name */}
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          <div className="flex items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 shadow-2xs">
             <UserCheck className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
             <div className="w-full">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Name</span>
@@ -397,7 +366,7 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
           </div>
 
           {/* Author Email */}
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          <div className="flex items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 shadow-2xs">
             <Mail className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
             <div className="w-full">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Email</span>
@@ -412,7 +381,7 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
           </div>
 
           {/* Department */}
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          <div className="flex items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 shadow-2xs">
             <Building2 className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
             <div className="w-full">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Department</span>
@@ -420,14 +389,14 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
                 type="text"
                 value={creator.department || ''}
                 onChange={(e) => handleUpdateCreatorField('department', e.target.value)}
-                placeholder="Department (e.g. Solutions Advisory)"
+                placeholder="Department"
                 className="w-full text-xs font-semibold text-slate-800 bg-transparent outline-none"
               />
             </div>
           </div>
 
           {/* Phone */}
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          <div className="flex items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 shadow-2xs">
             <Phone className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
             <div className="w-full">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Phone</span>
@@ -442,7 +411,7 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
           </div>
 
           {/* Website */}
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          <div className="flex items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 shadow-2xs">
             <Globe className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
             <div className="w-full">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Website</span>
@@ -457,7 +426,7 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
           </div>
 
           {/* Support Email */}
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          <div className="flex items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 shadow-2xs">
             <HelpCircle className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
             <div className="w-full">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Support Email</span>
@@ -473,32 +442,18 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
         </div>
       </div>
 
-      {/* 5. Terms, Disclaimer & Page Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        <div className="lg:col-span-8 space-y-1">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
-            <ShieldAlert className="w-3.5 h-3.5 text-slate-400" /> Commercial Terms & Legal Disclaimer
-          </label>
-          <textarea
-            rows={3}
-            value={quote.disclaimerNotice}
-            onChange={(e) => onChangeDisclaimer(e.target.value)}
-            className="w-full p-3 bg-white border border-slate-300 rounded-xl text-xs text-slate-700 leading-relaxed outline-none focus:ring-2 focus:ring-teal-500 transition resize-y font-sans"
-          />
-        </div>
-
-        <div className="lg:col-span-4 space-y-1">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-            Print / Browser View
-          </label>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition"
-          >
-            <Printer className="w-4 h-4 text-slate-600" /> Print / Save Web View
-          </button>
-        </div>
+      {/* 5. Terms, Disclaimer Notice */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <ShieldAlert className="w-3.5 h-3.5 text-slate-500" /> Commercial Terms & Legal Disclaimer Notice
+        </label>
+        <textarea
+          rows={3}
+          value={quote.disclaimerNotice}
+          onChange={(e) => onChangeDisclaimer(e.target.value)}
+          placeholder="Stipulations & commercial terms..."
+          className="w-full p-3.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 leading-relaxed outline-none focus:ring-2 focus:ring-teal-500 transition resize-y font-sans shadow-2xs"
+        />
       </div>
     </div>
   );
