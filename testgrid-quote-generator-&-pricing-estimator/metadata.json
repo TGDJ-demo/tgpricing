@@ -1,0 +1,6 @@
+{
+  "name": "TestGrid Quote Generator & Pricing Estimator",
+  "description": "Professional enterprise pricing calculator and quote generator with multi-format exports (PDF, Word, Excel, CSV), custom watermarking, quote management, multi-currency support, custom line items, tier configurator, and branding settings.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
