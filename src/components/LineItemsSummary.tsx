@@ -292,7 +292,7 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
 
       {/* 3. Executive Financial Investment Card */}
       <div className="rounded-2xl p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 text-white shadow-xl shadow-indigo-950/20 border border-purple-800/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition">
-        <div className="space-y-2">
+        <div className="space-y-2 w-full">
           <div className="flex items-center gap-2">
             <span className="text-xs font-black uppercase tracking-widest text-pink-300 bg-pink-950/80 border border-pink-700/80 px-2.5 py-0.5 rounded-md flex items-center gap-1">
               <FileCheck className="w-3.5 h-3.5 text-pink-400" /> Total Contract Value Summary
@@ -328,19 +328,6 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
               ({calc.installmentLabel})
             </div>
           </div>
-        </div>
-
-        {/* Primary Single PDF Export Action */}
-        <div className="shrink-0 w-full md:w-auto">
-          <Tooltip content="Generate and download high-resolution PDF sales proposal document" position="left">
-            <button
-              type="button"
-              onClick={() => exportToPdf(quote)}
-              className="w-full md:w-auto px-7 py-4 bg-gradient-to-r from-teal-400 via-indigo-500 to-pink-500 hover:from-teal-300 hover:to-pink-400 text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-lg shadow-pink-500/25 transition transform active:scale-98 cursor-pointer"
-            >
-              <Download className="w-4 h-4 text-white" /> Export Proposal (PDF)
-            </button>
-          </Tooltip>
         </div>
       </div>
 
@@ -442,18 +429,36 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
         </div>
       </div>
 
-      {/* 5. Terms, Disclaimer Notice */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-          <ShieldAlert className="w-3.5 h-3.5 text-slate-500" /> Commercial Terms & Legal Disclaimer Notice
-        </label>
-        <textarea
-          rows={3}
-          value={quote.disclaimerNotice}
-          onChange={(e) => onChangeDisclaimer(e.target.value)}
-          placeholder="Stipulations & commercial terms..."
-          className="w-full p-3.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 leading-relaxed outline-none focus:ring-2 focus:ring-teal-500 transition resize-y font-sans shadow-2xs"
-        />
+      {/* 5. Terms, Privacy & Legal Notice with Export Button on Right */}
+      <div className="bg-white border border-purple-100 rounded-2xl p-5 shadow-xs">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-end justify-between gap-5">
+          {/* Left: Commercial Terms, Privacy & Legal Disclaimer Notice */}
+          <div className="flex-1 space-y-1.5">
+            <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 text-purple-600" /> Commercial Terms, Privacy & Confidentiality Notice
+            </label>
+            <textarea
+              rows={3}
+              value={quote.disclaimerNotice}
+              onChange={(e) => onChangeDisclaimer(e.target.value)}
+              placeholder="Stipulations, privacy terms & legal disclaimer notice..."
+              className="w-full p-3.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-800 leading-relaxed outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-300 transition resize-y font-sans shadow-2xs"
+            />
+          </div>
+
+          {/* Right: Export Proposal PDF Action Button */}
+          <div className="shrink-0 flex items-end">
+            <Tooltip content="Generate and download high-resolution PDF sales proposal document" position="left">
+              <button
+                type="button"
+                onClick={() => exportToPdf(quote)}
+                className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-teal-400 via-indigo-500 to-pink-500 hover:from-teal-300 hover:to-pink-400 text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-lg shadow-purple-500/20 transition transform active:scale-98 cursor-pointer h-[68px]"
+              >
+                <Download className="w-4 h-4 text-white" /> Export Proposal (PDF)
+              </button>
+            </Tooltip>
+          </div>
+        </div>
       </div>
     </div>
   );
