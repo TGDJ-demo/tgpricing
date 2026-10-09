@@ -53,6 +53,7 @@ export const QuoteHistoryModal: React.FC<QuoteHistoryModalProps> = ({
     const newQuoteRecord: QuoteData = {
       ...currentQuote,
       id: `quote-${Date.now()}`,
+      salesOrder: { ...currentQuote.salesOrder, sourceQuoteId: `quote-${Date.now()}` },
       title: saveTitle || 'Saved Quote',
       updatedAt: new Date().toISOString(),
     };

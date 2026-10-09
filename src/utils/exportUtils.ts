@@ -276,8 +276,21 @@ export function calculateQuoteLineItems(quote: QuoteData): {
   };
 }
 
+export function exportToGoogleSheetsCSV(quote: QuoteData): { csvContent: string; tsvClipboard: string } {
+  const { lineItems } = calculateQuoteLineItems(quote);
+  const rows = [
+    ['Description', 'Quantity', 'Unit price', 'Amount', 'Currency'],
+    ...lineItems.map((item) => [item.label, String(item.qty), String(item.unitCostDiscounted), String(item.totalDiscounted), quote.customerInfo.currency || 'USD']),
+  ];
+  const csvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
+  return {
+    csvContent: rows.map((row) => row.map(csvCell).join(',')).join('\r\n'),
+    tsvClipboard: rows.map((row) => row.map((value) => value.replace(/[\t\r\n]/g, ' ')).join('\t')).join('\n'),
+  };
+}
+
 // EDITABLE MODERN PREMIUM SALES PROPOSAL VECTOR PDF EXPORT
-export function exportToPdf(quote: QuoteData): void {
+export function exportToPdf(quote: QuoteData, documentType: 'quote' | 'order' = 'quote', density: 'compact' | 'balanced' | 'roomy' = 'balanced'): Blob | undefined {
   try {
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -299,42 +312,59 @@ export function exportToPdf(quote: QuoteData): void {
       supportEmail: 'support@testgrid.io',
     };
 
-    // Modern Light Theme Palette RGB Colors
+    // Compact single-page A4, with editable AcroForm fields for client-facing details.
+    const formApi = doc as any;
+    const addField = (name: string, value: string, x: number, y: number, w: number, h: number, fontSize = 8, multiline = false) => {
+      try {
+        if (!formApi.AcroForm || !formApi.AcroForm.TextField) return;
+        const field = new formApi.AcroForm.TextField();
+        field.fieldName = name;
+        field.value = value || '';
+        field.x = x; field.y = y; field.width = w; field.height = h;
+        field.fontSize = fontSize;
+        field.multiline = multiline;
+        field.borderWidth = 0;
+        field.backgroundColor = '#ffffff';
+        field.color = '#0f172a';
+        doc.addField(field);
+      } catch (error) { console.warn(`Could not add editable PDF field: ${name}`, error); }
+    };
+    // Premium navy and restrained brass palette.
     const primaryRgb: [number, number, number] = [15, 23, 42]; // Slate 900
     const headerBlueRgb: [number, number, number] = [30, 41, 59]; // Slate Navy Header
-    const accentPurpleRgb: [number, number, number] = [139, 92, 246]; // Modern Purple
-    const accentTealRgb: [number, number, number] = [20, 184, 166]; // Light Teal
-    const accentPinkRgb: [number, number, number] = [236, 72, 153]; // Modern Pink
+    const accentPurpleRgb: [number, number, number] = [176, 139, 72];
+    const accentTealRgb: [number, number, number] = [224, 190, 120];
+    const accentPinkRgb: [number, number, number] = [176, 139, 72];
 
     // Helper: Draw Header Bar on any page
     const drawPageHeader = (pdfDoc: jsPDF) => {
       // Header dark slate base
       pdfDoc.setFillColor(headerBlueRgb[0], headerBlueRgb[1], headerBlueRgb[2]);
-      pdfDoc.rect(0, 0, 210, 24, 'F');
+      pdfDoc.rect(0, 0, 210, 22, 'F');
 
       // Title Brand
       pdfDoc.setFont('helvetica', 'bold');
       pdfDoc.setFontSize(18);
       pdfDoc.setTextColor(255, 255, 255);
-      pdfDoc.text('TestGrid', 14, 15);
+      pdfDoc.text('TestGrid', 14, 14);
 
-      pdfDoc.setFontSize(11);
+      pdfDoc.setFontSize(9);
       pdfDoc.setTextColor(accentTealRgb[0], accentTealRgb[1], accentTealRgb[2]);
-      pdfDoc.text('Enterprise', 42, 15);
+      pdfDoc.text('ENTERPRISE', 14, 19);
 
       pdfDoc.setFontSize(8.5);
       pdfDoc.setTextColor(226, 232, 240);
-      pdfDoc.text('COMMERCIAL PROPOSAL & ESTIMATE', 196, 15, { align: 'right' });
+      pdfDoc.text(documentType === 'order' ? 'SALES ORDER' : 'COMMERCIAL QUOTE', 196, 14, { align: 'right' });
 
       // Multi-color modern gradient accent bar (Blue -> Purple -> Pink -> Teal)
       pdfDoc.setFillColor(59, 130, 246); // Blue
-      pdfDoc.rect(0, 24, 52.5, 1.2, 'F');
+      pdfDoc.rect(0, 22, 210, 1, 'F');
       pdfDoc.setFillColor(139, 92, 246); // Purple
-      pdfDoc.rect(52.5, 24, 52.5, 1.2, 'F');
+      pdfDoc.rect(52.5, 22, 52.5, 1, 'F');
       pdfDoc.setFillColor(236, 72, 153); // Pink
-      pdfDoc.rect(105, 24, 52.5, 1.2, 'F');
+      pdfDoc.rect(105, 22, 52.5, 1, 'F');
       pdfDoc.setFillColor(20, 184, 166); // Teal
-      pdfDoc.rect(157.5, 24, 52.5, 1.2, 'F');
+      pdfDoc.rect(157.5, 22, 52.5, 1, 'F');
     };
 
     // Draw Page 1 Header
@@ -343,7 +373,7 @@ export function exportToPdf(quote: QuoteData): void {
     // 2. Client & Metadata Details Card (3 Columns with Soft Indigo/Purple Border)
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(221, 214, 254); // Purple 200
-    doc.roundedRect(14, 30, 182, 36, 3, 3, 'FD');
+    doc.roundedRect(14, 27, 182, 41, 3, 3, 'FD');
 
     // Column 1: Client Info
     doc.setFontSize(7.5);
@@ -362,6 +392,9 @@ export function exportToPdf(quote: QuoteData): void {
     doc.text(`Contact: ${quote.customerInfo.customerEmail || 'N/A'}`, 18, 49);
     doc.text(`Organization: ${quote.customerInfo.companyName || 'TestGrid Partner'}`, 18, 55);
     doc.text(`Payment Terms: ${quote.customerInfo.paymentTerms || 'Net 30 Days'}`, 18, 61);
+    addField('Customer Name', quote.customerInfo.customerName, 18, 39, 59, 6, 9);
+    addField('Customer Email', quote.customerInfo.customerEmail, 18, 46, 59, 5, 7);
+    addField('Customer Company', quote.customerInfo.companyName, 18, 52, 59, 5, 7);
 
     // Column 2: Provider & Representative Info
     doc.setFontSize(7.5);
@@ -385,12 +418,13 @@ export function exportToPdf(quote: QuoteData): void {
     doc.setFontSize(7.5);
     doc.setTextColor(236, 72, 153); // Pink Accent Header
     doc.setFont('helvetica', 'bold');
-    doc.text('PROPOSAL METADATA', 148, 37);
+    doc.text(documentType === 'order' ? 'ORDER METADATA' : 'QUOTE METADATA', 148, 37);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
     doc.setTextColor(139, 92, 246);
-    doc.text(`Ref: ${quote.customerInfo.quoteNumber || 'TG-QUOTE'}`, 148, 43);
+    doc.text(`${documentType === 'order' ? 'Invoice Number' : 'Quote Number'}: ${quote.customerInfo.quoteNumber || 'TG-QUOTE'}`, 148, 43);
+    addField(documentType === 'order' ? 'Invoice Number' : 'Quote Number', quote.customerInfo.quoteNumber || '', 148, 39, 45, 5, 8);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
@@ -398,6 +432,21 @@ export function exportToPdf(quote: QuoteData): void {
     doc.text(`Issue Date: ${quote.customerInfo.date}`, 148, 49);
     doc.text(`Validity: ${quote.customerInfo.validityDays}`, 148, 55);
     doc.text(`Contract Term: ${calc.commitmentYears} Year(s)`, 148, 61);
+    doc.setFontSize(7);
+    doc.text('PO:', 148, 66);
+    addField('Purchase Order Number', quote.salesOrder.purchaseOrderNumber || '', 157, 62, 36, 6, 7);
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, 70, 88, 12, 2, 2, 'FD');
+    doc.roundedRect(108, 70, 88, 12, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text('BILL TO', 18, 73);
+    doc.text('SERVICE / SHIP TO', 112, 73);
+    addField('Billing Address', quote.salesOrder.billingAddress || '', 18, 74, 80, 6, 5.5, true);
+    addField('Service Address', quote.salesOrder.serviceAddress || '', 112, 74, 80, 6, 5.5, true);
 
     // 3. Prepare Line Items Table
     const tableRows = calc.lineItems.map((item) => {
@@ -417,63 +466,73 @@ export function exportToPdf(quote: QuoteData): void {
 
     // 4. Render Itemized Pricing AutoTable
     autoTable(doc, {
-      startY: 71,
+      startY: 84,
       head: [['COMMERCIAL ITEM DESCRIPTION', 'QTY', 'UNIT PRICE', 'SUBTOTAL']],
       body: tableRows,
       headStyles: {
         fillColor: primaryRgb,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 8.5,
-        cellPadding: 4,
+        fontSize: density === 'compact' ? 5 : density === 'roomy' ? 7 : 6.5,
+        cellPadding: density === 'compact' ? 0.6 : density === 'roomy' ? 2.4 : 1.5,
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252],
       },
       styles: {
         font: 'helvetica',
-        fontSize: 8,
-        cellPadding: 3.5,
+        fontSize: density === 'compact' ? 4.5 : density === 'roomy' ? 6.2 : 5.5,
+        cellPadding: density === 'compact' ? 0.6 : density === 'roomy' ? 2.2 : 1,
         textColor: [30, 41, 59],
         lineColor: [226, 232, 240],
         lineWidth: 0.1,
       },
       columnStyles: {
-        0: { cellWidth: 102 },
-        1: { halign: 'center', cellWidth: 18 },
-        2: { halign: 'right', cellWidth: 32 },
-        3: { halign: 'right', cellWidth: 30 },
+        0: { cellWidth: 105 },
+        1: { halign: 'center', cellWidth: 15 },
+        2: { halign: 'right', cellWidth: 30 },
+        3: { halign: 'right', cellWidth: 32 },
       },
+      pageBreak: 'avoid',
+      rowPageBreak: 'avoid',
       didDrawPage: (data) => {
-        if (data.pageNumber > 1) {
-          drawPageHeader(doc);
-        }
+        if (data.pageNumber > 1) doc.deletePage(data.pageNumber);
       },
     });
 
     // Layout management
     // @ts-expect-error autoTable attaches finalY
-    let currentY = (doc.lastAutoTable?.finalY || 120) + 6;
-    const pageMaxY = 270;
+    let currentY = (doc.lastAutoTable?.finalY || 120) + 2;
+    const pageMaxY = 281;
 
     function ensureSpace(neededHeight: number) {
-      if (currentY + neededHeight > pageMaxY) {
-        doc.addPage();
-        drawPageHeader(doc);
-        currentY = 30;
-      }
+      // Keep sections in normal document flow; never move a later section
+      // backwards over the preceding block when content is taller than expected.
+      if (currentY + neededHeight > pageMaxY) console.warn('Quote content is close to the A4 page limit', { currentY, neededHeight });
+    }
+
+    if (documentType === 'order' && quote.salesOrder.instructions?.trim()) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text('ORDER INSTRUCTIONS', 14, currentY + 2);
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(14, currentY + 3, 182, 11, 2, 2, 'FD');
+      addField('Order Instructions', quote.salesOrder.instructions, 14, currentY + 3, 182, 11, 6, true);
+      currentY += 17;
     }
 
     // 5. Executive Financial Investment Summary Box
-    ensureSpace(46);
+    ensureSpace(34);
 
     doc.setFillColor(15, 23, 42); // Dark Slate Indigo Card
     doc.setDrawColor(30, 41, 59);
-    doc.roundedRect(14, currentY, 182, 44, 3, 3, 'FD');
+    doc.roundedRect(14, currentY, 182, 42, 3, 3, 'FD');
 
     // Gradient accent bar on left of investment card
     doc.setFillColor(236, 72, 153); // Pink
-    doc.rect(14, currentY, 2.5, 44, 'F');
+    doc.rect(14, currentY, 2.5, 42, 'F');
 
     // Left Box Column - Commercial Investment Totals
     doc.setFontSize(8);
@@ -493,26 +552,23 @@ export function exportToPdf(quote: QuoteData): void {
         20,
         currentY + 21
       );
-    } else {
-      doc.setTextColor(148, 163, 184);
-      doc.text(`Applied Commercial Discount: Standard List Price`, 20, currentY + 21);
     }
 
-    doc.setFontSize(11.5);
+    doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text(`ANNUAL VALUE (ACV): ${formatCurrencyVal(calc.grandTotal, currency)} ${currency}`, 20, currentY + 30);
+    doc.text(`CONTRACT VALUE: ${formatCurrencyVal(calc.grandTotal, currency)} ${currency}`, 20, currentY + 28);
 
     if (calc.commitmentYears > 1) {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(148, 163, 184);
-      doc.text(`Multi-Year Contract Value (${calc.commitmentYears} Yrs): ${formatCurrencyVal(calc.multiYearTotal, currency)} ${currency}`, 20, currentY + 37);
+      doc.text(`Multi-Year Value (${calc.commitmentYears} Yrs): ${formatCurrencyVal(calc.multiYearTotal, currency)} ${currency}`, 20, currentY + 32);
     } else {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(148, 163, 184);
-      doc.text(`1-Year Subscription Commitment`, 20, currentY + 37);
+    doc.text(`1-Year Subscription Commitment`, 20, currentY + 32);
     }
 
     // Right Box Column - Payment & Billing Schedule
@@ -527,51 +583,29 @@ export function exportToPdf(quote: QuoteData): void {
     doc.text(`Billing Cadence: ${quote.discountSettings.billingCycle === 'monthly' ? 'Monthly' : 'Annual Contract'}`, 115, currentY + 15);
     doc.text(`Payment Schedule: ${calc.paymentScheduleStr}`, 115, currentY + 21);
     doc.text(`Installment: ${formatCurrencyVal(calc.installmentAmount, currency)} ${currency} (${calc.installmentLabel})`, 115, currentY + 27);
-    doc.text(`Invoicing Term: ${quote.customerInfo.paymentTerms || 'Net 30 Days'}`, 115, currentY + 33);
-    doc.text(`Currency: Base ${currency}`, 115, currentY + 39);
+    doc.text(`Payment Terms: ${quote.customerInfo.paymentTerms || 'Net 30 Days'}`, 115, currentY + 33);
+    doc.text(`Currency: ${currency}`, 115, currentY + 39);
 
-    currentY += 50;
+    currentY += 46;
 
-    // 6. Commercial Terms & Stipulations Box
-    const disclaimerLines = doc.splitTextToSize(
-      quote.disclaimerNotice || 'CONFIDENTIAL - TestGrid Commercial Proposal. Valid for 30 days from issue date.',
-      178
-    );
-    const disclaimerBoxHeight = Math.max(22, disclaimerLines.length * 3.5 + 10);
-
-    ensureSpace(disclaimerBoxHeight + 4);
-
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(14, currentY, 182, disclaimerBoxHeight, 2, 2, 'FD');
-
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(71, 85, 105);
-    doc.text('COMMERCIAL TERMS & STIPULATIONS', 18, currentY + 6);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(100, 116, 139);
-    doc.text(disclaimerLines, 18, currentY + 11);
-
-    currentY += disclaimerBoxHeight + 6;
+    // Commercial terms and confidentiality language are reserved for the footer.
+    currentY += 3;
 
     // 7. Proposal Issued By Section (GUARANTEED TO EXPORT - Height ~26mm)
-    ensureSpace(28);
+    ensureSpace(documentType === 'order' ? 63 : 34);
 
     doc.setFillColor(245, 243, 255); // Soft Purple Background (#f5f3ff)
     doc.setDrawColor(221, 214, 254); // Soft Purple Border (#ddd6fe)
-    doc.roundedRect(14, currentY, 182, 24, 3, 3, 'FD');
+    doc.roundedRect(14, currentY, 182, documentType === 'order' ? 31 : 22, 3, 3, 'FD');
 
     // Purple accent bar
     doc.setFillColor(139, 92, 246);
-    doc.rect(14, currentY, 2.5, 24, 'F');
+    doc.rect(14, currentY, 2.5, documentType === 'order' ? 31 : 22, 'F');
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(15, 23, 42);
-    doc.text('PROPOSAL ISSUED BY — ADVISORY CONTACT INFORMATION', 20, currentY + 6);
+    doc.text(documentType === 'order' ? 'ORDER PREPARED BY — CONTACT INFORMATION' : 'QUOTE PREPARED BY — CONTACT INFORMATION', 20, currentY + 6);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
@@ -579,7 +613,7 @@ export function exportToPdf(quote: QuoteData): void {
     doc.text(`${creator.authorName}  ·  ${creator.authorRole}`, 20, currentY + 12);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
+    doc.setFontSize(5.8);
     doc.setTextColor(51, 65, 85);
     doc.text(
       `Department: ${creator.department || 'Solutions Engineering & Advisory'}   |   Email: ${creator.authorEmail}   |   Phone: ${creator.authorPhone}`,
@@ -592,6 +626,35 @@ export function exportToPdf(quote: QuoteData): void {
       currentY + 21.5
     );
 
+    currentY += documentType === 'order' ? 33 : 0;
+    if (documentType === 'order') {
+    doc.setDrawColor(203, 213, 225);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(14, currentY, 89, 25, 2, 2, 'FD');
+    doc.roundedRect(107, currentY, 89, 25, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(51, 65, 85);
+    doc.text('TESTGRID AUTHORIZED SIGNATURE', 18, currentY + 5);
+    doc.text('CUSTOMER AUTHORIZED SIGNATURE', 111, currentY + 5);
+    addField('TestGrid Signature', '', 18, currentY + 7, 78, 8, 7);
+    addField('Customer Signature', '', 111, currentY + 7, 78, 8, 7);
+    doc.setDrawColor(100, 116, 139);
+    doc.line(18, currentY + 15, 96, currentY + 15);
+    doc.line(111, currentY + 15, 189, currentY + 15);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(5.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Signature / Name / Title', 18, currentY + 19);
+    doc.text('Signature / Name / Title', 111, currentY + 19);
+    doc.line(18, currentY + 24, 70, currentY + 24);
+    doc.line(111, currentY + 24, 163, currentY + 24);
+    doc.text('Date', 73, currentY + 25);
+    doc.text('Date', 166, currentY + 25);
+    addField('TestGrid Signature Date', '', 73, currentY + 19, 23, 5, 6);
+    addField('Customer Signature Date', '', 166, currentY + 19, 23, 5, 6);
+    }
+
     // 8. FINAL PASS: DRAW WATERMARK & FOOTERS ON ALL PAGES OVER BACKGROUNDS WITH GSTATE OPACITY
     // @ts-expect-error jsPDF total pages getter
     const totalPages = doc.internal.getNumberOfPages();
@@ -600,7 +663,7 @@ export function exportToPdf(quote: QuoteData): void {
       doc.setPage(pageNum);
 
       // Render Watermark Over Content with Translucent Blend Opacity
-      if (quote.watermarkSettings && quote.watermarkSettings.enabled) {
+      if (documentType === 'quote' && quote.watermarkSettings && quote.watermarkSettings.enabled) {
         try {
           let opacityVal = quote.watermarkSettings.opacity;
           if (typeof opacityVal !== 'number' || isNaN(opacityVal)) opacityVal = 0.18;
@@ -609,7 +672,6 @@ export function exportToPdf(quote: QuoteData): void {
           // Ensure watermark is reasonably visible (between 0.12 and 0.25)
           opacityVal = Math.max(0.12, Math.min(0.28, opacityVal));
 
-          // @ts-expect-error jsPDF supports GState
           if (typeof doc.GState === 'function') {
             // @ts-expect-error jsPDF supports GState
             doc.setGState(new doc.GState({ opacity: opacityVal }));
@@ -641,7 +703,6 @@ export function exportToPdf(quote: QuoteData): void {
           }
 
           // Reset Opacity Back to 1.0 for Footer
-          // @ts-expect-error jsPDF supports GState
           if (typeof doc.GState === 'function') {
             // @ts-expect-error jsPDF supports GState
             doc.setGState(new doc.GState({ opacity: 1.0 }));
@@ -651,26 +712,27 @@ export function exportToPdf(quote: QuoteData): void {
         }
       }
 
-      // Draw Page Number Footer
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(148, 163, 184);
-      doc.text(
-        `TestGrid Enterprise Proposal  ·  Ref: ${quote.customerInfo.quoteNumber || 'TG-QUOTE'}  ·  Page ${pageNum} of ${totalPages}`,
-        105,
-        290,
-        { align: 'center' }
+      doc.setFontSize(4.8);
+      doc.setTextColor(185, 28, 28);
+      const confidentialityNotice = doc.splitTextToSize(
+        'PRIVATE & CONFIDENTIAL — This document contains proprietary information of TestGrid and is intended solely for the named recipient. Unauthorized use, disclosure, or distribution is prohibited.',
+        178
       );
+      doc.text(confidentialityNotice, 105, 286, { align: 'center', lineHeightFactor: 1.1 });
     }
 
     // Save PDF
     const clientClean = quote.customerInfo.customerName
       ? quote.customerInfo.customerName.replace(/[^a-zA-Z0-9]/g, '_')
       : 'Client';
-    const filename = `TestGrid_Proposal_${quote.customerInfo.quoteNumber || 'Estimate'}_${clientClean}.pdf`;
-    doc.save(filename);
+    const customerDocName = quote.customerInfo.customerName?.trim().replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '') || 'Customer';
+    const issueDate = quote.customerInfo.date || new Date().toISOString().slice(0, 10);
+    doc.setProperties({ title: `${customerDocName}_${documentType === 'order' ? 'Sales_Order_Form' : 'Quote'}_${issueDate}` });
+    return doc.output('blob');
   } catch (error) {
     console.error('Error generating PDF proposal:', error);
     alert('An error occurred while exporting the PDF. Please check browser console or try again.');
+    return undefined;
   }
 }

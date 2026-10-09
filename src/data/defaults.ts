@@ -17,7 +17,7 @@ export const DEFAULT_WATERMARK: WatermarkSettings = {
   opacity: 0.08,
   fontSize: 10, // rem for CSS, pt for PDF
   color: '#2c3260',
-  angle: -20,
+  angle: 20,
   repeat: true,
 };
 
@@ -26,9 +26,9 @@ export const DEFAULT_CUSTOMER: QuoteCustomerInfo = {
   customerName: 'Acme Enterprises Inc.',
   customerEmail: 'procurement@acme.com',
   companyName: 'TestGrid Labs Inc.',
-  preparedBy: 'Damanjeet Singh',
-  preparedByTitle: 'Senior Enterprise Solutions Architect',
-  preparedByEmail: 'damanjeet@testgrid.io',
+  preparedBy: 'Your name',
+  preparedByTitle: 'Your Title',
+  preparedByEmail: 'jeff.fleishman@testgrid.ai',
   date: new Date().toISOString().split('T')[0],
   validityDays: '30 days',
   paymentTerms: 'Net 30 Days',
@@ -36,9 +36,9 @@ export const DEFAULT_CUSTOMER: QuoteCustomerInfo = {
 };
 
 export const DEFAULT_CREATOR_INFO: CreatorContactInfo = {
-  authorName: 'TestGrid Solutions Engineering',
-  authorRole: 'Enterprise Architecture & Advisory',
-  authorEmail: 'sales@testgrid.io',
+  authorName: 'Author Name',
+  authorRole: 'Author Role / Title',
+  authorEmail: 'jeff.fleishman@testgrid.ai',
   authorPhone: '+1 (800) 555-8378',
   companyWebsite: 'https://testgrid.io',
   supportEmail: 'support@testgrid.io',
@@ -173,9 +173,13 @@ export const DEFAULT_DISCOUNT: DiscountSettings = {
 export const DEFAULT_DISCLAIMER = `+ Premium 24/7 dedicated support and an assigned Solutions Engineer are included with annual subscription packages.
 + License counts are scalable mid-term with pro-rated billing.
 + Security & Infrastructure: 99.9% SLA Guarantee, SOC2 Type II Certified, ISO 27001, Single Sign-On (SAML/Okta).
+Prices listed are net values in the chosen currency and valid for 30 days from issue date.`;
 
-PRIVATE & CONFIDENTIAL NOTICE
-This pricing quote contains proprietary information intended solely for the recipient organization. Prices listed are net values in the chosen currency and valid for 30 days from issue date.`;
+export const PRIVACY_CONFIDENTIALITY_NOTICE = 'PRIVATE & CONFIDENTIAL — Contains proprietary TestGrid information. Intended solely for the named recipient; unauthorized use, disclosure, or distribution is prohibited.';
+
+export function buildDefaultOrderInstructions(commercialTerms: string): string {
+  return [commercialTerms.trim(), PRIVACY_CONFIDENTIALITY_NOTICE].filter(Boolean).join('\n\n');
+}
 
 export const INITIAL_QUOTE_STATE: QuoteData = {
   id: 'quote-default-1',
@@ -190,6 +194,17 @@ export const INITIAL_QUOTE_STATE: QuoteData = {
   watermarkSettings: DEFAULT_WATERMARK,
   disclaimerNotice: DEFAULT_DISCLAIMER,
   notes: 'Customer requested 5 dedicated mobile devices + 10 browser execution channels for iOS/Android regression suite.',
+  salesOrder: {
+    id: 'order-default-1',
+    sourceQuoteId: 'quote-default-1',
+    invoiceNumber: 'TG-INV-2026-8041',
+    orderDate: new Date().toISOString().split('T')[0],
+    purchaseOrderNumber: '',
+    paymentTerms: DEFAULT_CUSTOMER.paymentTerms,
+    billingAddress: '',
+    serviceAddress: '',
+    instructions: buildDefaultOrderInstructions(DEFAULT_DISCLAIMER),
+  },
   showAddonsSection: true,
   showServicesSection: true,
   creatorContactInfo: DEFAULT_CREATOR_INFO,
