@@ -12,8 +12,8 @@ export const CURRENCIES: CurrencyOption[] = [
 
 export const DEFAULT_WATERMARK: WatermarkSettings = {
   enabled: true,
-  text: 'TESTGRID · CONFIDENTIAL ESTIMATE',
-  subtext: 'PROPOSAL FOR REVIEW ONLY',
+  text: 'TESTGRID',
+  subtext: 'Confidential',
   opacity: 0.08,
   fontSize: 10, // rem for CSS, pt for PDF
   color: '#2c3260',
