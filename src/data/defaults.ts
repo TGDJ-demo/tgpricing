@@ -26,9 +26,9 @@ export const DEFAULT_CUSTOMER: QuoteCustomerInfo = {
   customerName: 'Acme Enterprises Inc.',
   customerEmail: 'procurement@acme.com',
   companyName: 'TestGrid Labs Inc.',
-  preparedBy: 'Damanjeet Singh',
-  preparedByTitle: 'Senior Enterprise Solutions Architect',
-  preparedByEmail: 'damanjeet@testgrid.io',
+  preparedBy: 'Your name',
+  preparedByTitle: 'Your Title',
+  preparedByEmail: 'jeff.fleishman@testgrid.ai',
   date: new Date().toISOString().split('T')[0],
   validityDays: '30 days',
   paymentTerms: 'Net 30 Days',
@@ -36,9 +36,9 @@ export const DEFAULT_CUSTOMER: QuoteCustomerInfo = {
 };
 
 export const DEFAULT_CREATOR_INFO: CreatorContactInfo = {
-  authorName: 'TestGrid Solutions Engineering',
-  authorRole: 'Enterprise Architecture & Advisory',
-  authorEmail: 'sales@testgrid.io',
+  authorName: 'Author Name',
+  authorRole: 'Author Role / Title',
+  authorEmail: 'jeff.fleishman@testgrid.ai',
   authorPhone: '+1 (800) 555-8378',
   companyWebsite: 'https://testgrid.io',
   supportEmail: 'support@testgrid.io',
