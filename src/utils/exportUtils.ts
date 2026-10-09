@@ -299,42 +299,58 @@ export function exportToPdf(quote: QuoteData): void {
       supportEmail: 'support@testgrid.io',
     };
 
-    // Modern Light Theme Palette RGB Colors
+    // Compact single-page A4, with editable AcroForm fields for client-facing details.
+    const formApi = doc as any;
+    const addField = (name: string, value: string, x: number, y: number, w: number, h: number, fontSize = 8) => {
+      try {
+        if (!formApi.AcroForm || !formApi.AcroForm.TextField) return;
+        const field = new formApi.AcroForm.TextField();
+        field.fieldName = name;
+        field.value = value || '';
+        field.x = x; field.y = y; field.width = w; field.height = h;
+        field.fontSize = fontSize;
+        field.borderWidth = 0;
+        field.backgroundColor = [255, 255, 255];
+        field.color = [15, 23, 42];
+        doc.addField(field);
+      } catch (error) { console.warn(`Could not add editable PDF field: ${name}`, error); }
+    };
+    // Premium navy and restrained brass palette.
     const primaryRgb: [number, number, number] = [15, 23, 42]; // Slate 900
     const headerBlueRgb: [number, number, number] = [30, 41, 59]; // Slate Navy Header
-    const accentPurpleRgb: [number, number, number] = [139, 92, 246]; // Modern Purple
-    const accentTealRgb: [number, number, number] = [20, 184, 166]; // Light Teal
-    const accentPinkRgb: [number, number, number] = [236, 72, 153]; // Modern Pink
+    const accentPurpleRgb: [number, number, number] = [176, 139, 72];
+    const accentTealRgb: [number, number, number] = [224, 190, 120];
+    const accentPinkRgb: [number, number, number] = [176, 139, 72];
 
     // Helper: Draw Header Bar on any page
     const drawPageHeader = (pdfDoc: jsPDF) => {
       // Header dark slate base
       pdfDoc.setFillColor(headerBlueRgb[0], headerBlueRgb[1], headerBlueRgb[2]);
-      pdfDoc.rect(0, 0, 210, 24, 'F');
+      pdfDoc.rect(0, 0, 210, 22, 'F');
 
       // Title Brand
       pdfDoc.setFont('helvetica', 'bold');
       pdfDoc.setFontSize(18);
       pdfDoc.setTextColor(255, 255, 255);
-      pdfDoc.text('TestGrid', 14, 15);
+      pdfDoc.text('TestGrid', 14, 14);
 
-      pdfDoc.setFontSize(11);
+      pdfDoc.setFontSize(9);
       pdfDoc.setTextColor(accentTealRgb[0], accentTealRgb[1], accentTealRgb[2]);
-      pdfDoc.text('Enterprise', 42, 15);
+      pdfDoc.text('ENTERPRISE', 14, 19);
 
       pdfDoc.setFontSize(8.5);
       pdfDoc.setTextColor(226, 232, 240);
-      pdfDoc.text('COMMERCIAL PROPOSAL & ESTIMATE', 196, 15, { align: 'right' });
+      pdfDoc.text('SALES ORDER QUOTE', 196, 14, { align: 'right' });
 
       // Multi-color modern gradient accent bar (Blue -> Purple -> Pink -> Teal)
       pdfDoc.setFillColor(59, 130, 246); // Blue
-      pdfDoc.rect(0, 24, 52.5, 1.2, 'F');
+      pdfDoc.rect(0, 22, 210, 1, 'F');
       pdfDoc.setFillColor(139, 92, 246); // Purple
-      pdfDoc.rect(52.5, 24, 52.5, 1.2, 'F');
+      pdfDoc.rect(52.5, 22, 52.5, 1, 'F');
       pdfDoc.setFillColor(236, 72, 153); // Pink
-      pdfDoc.rect(105, 24, 52.5, 1.2, 'F');
+      pdfDoc.rect(105, 22, 52.5, 1, 'F');
       pdfDoc.setFillColor(20, 184, 166); // Teal
-      pdfDoc.rect(157.5, 24, 52.5, 1.2, 'F');
+      pdfDoc.rect(157.5, 22, 52.5, 1, 'F');
     };
 
     // Draw Page 1 Header
@@ -343,7 +359,7 @@ export function exportToPdf(quote: QuoteData): void {
     // 2. Client & Metadata Details Card (3 Columns with Soft Indigo/Purple Border)
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(221, 214, 254); // Purple 200
-    doc.roundedRect(14, 30, 182, 36, 3, 3, 'FD');
+    doc.roundedRect(14, 27, 182, 35, 3, 3, 'FD');
 
     // Column 1: Client Info
     doc.setFontSize(7.5);
@@ -362,6 +378,9 @@ export function exportToPdf(quote: QuoteData): void {
     doc.text(`Contact: ${quote.customerInfo.customerEmail || 'N/A'}`, 18, 49);
     doc.text(`Organization: ${quote.customerInfo.companyName || 'TestGrid Partner'}`, 18, 55);
     doc.text(`Payment Terms: ${quote.customerInfo.paymentTerms || 'Net 30 Days'}`, 18, 61);
+    addField('Customer Name', quote.customerInfo.customerName, 18, 39, 59, 6, 9);
+    addField('Customer Email', quote.customerInfo.customerEmail, 18, 46, 59, 5, 7);
+    addField('Customer Company', quote.customerInfo.companyName, 18, 52, 59, 5, 7);
 
     // Column 2: Provider & Representative Info
     doc.setFontSize(7.5);
@@ -398,6 +417,7 @@ export function exportToPdf(quote: QuoteData): void {
     doc.text(`Issue Date: ${quote.customerInfo.date}`, 148, 49);
     doc.text(`Validity: ${quote.customerInfo.validityDays}`, 148, 55);
     doc.text(`Contract Term: ${calc.commitmentYears} Year(s)`, 148, 61);
+    addField('Quote Reference', quote.customerInfo.quoteNumber, 148, 39, 45, 5, 8);
 
     // 3. Prepare Line Items Table
     const tableRows = calc.lineItems.map((item) => {
@@ -417,63 +437,59 @@ export function exportToPdf(quote: QuoteData): void {
 
     // 4. Render Itemized Pricing AutoTable
     autoTable(doc, {
-      startY: 71,
+      startY: 67,
       head: [['COMMERCIAL ITEM DESCRIPTION', 'QTY', 'UNIT PRICE', 'SUBTOTAL']],
       body: tableRows,
       headStyles: {
         fillColor: primaryRgb,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 8.5,
-        cellPadding: 4,
+        fontSize: 7,
+        cellPadding: 2,
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252],
       },
       styles: {
         font: 'helvetica',
-        fontSize: 8,
-        cellPadding: 3.5,
+        fontSize: 6.5,
+        cellPadding: 1.6,
         textColor: [30, 41, 59],
         lineColor: [226, 232, 240],
         lineWidth: 0.1,
       },
       columnStyles: {
-        0: { cellWidth: 102 },
-        1: { halign: 'center', cellWidth: 18 },
-        2: { halign: 'right', cellWidth: 32 },
-        3: { halign: 'right', cellWidth: 30 },
+        0: { cellWidth: 105 },
+        1: { halign: 'center', cellWidth: 15 },
+        2: { halign: 'right', cellWidth: 30 },
+        3: { halign: 'right', cellWidth: 32 },
       },
+      pageBreak: 'avoid',
+      rowPageBreak: 'avoid',
       didDrawPage: (data) => {
-        if (data.pageNumber > 1) {
-          drawPageHeader(doc);
-        }
+        if (data.pageNumber > 1) doc.deletePage(data.pageNumber);
       },
     });
 
     // Layout management
     // @ts-expect-error autoTable attaches finalY
     let currentY = (doc.lastAutoTable?.finalY || 120) + 6;
-    const pageMaxY = 270;
+    const pageMaxY = 278;
 
     function ensureSpace(neededHeight: number) {
-      if (currentY + neededHeight > pageMaxY) {
-        doc.addPage();
-        drawPageHeader(doc);
-        currentY = 30;
-      }
+      if (currentY + neededHeight > pageMaxY) currentY = Math.max(currentY, 276 - neededHeight);
     }
 
     // 5. Executive Financial Investment Summary Box
-    ensureSpace(46);
+    ensureSpace(40);
 
     doc.setFillColor(15, 23, 42); // Dark Slate Indigo Card
     doc.setDrawColor(30, 41, 59);
-    doc.roundedRect(14, currentY, 182, 44, 3, 3, 'FD');
+    doc.roundedRect(14, currentY, 182, 38, 3, 3, 'FD');
 
     // Gradient accent bar on left of investment card
     doc.setFillColor(236, 72, 153); // Pink
-    doc.rect(14, currentY, 2.5, 44, 'F');
+    doc.rect(14, currentY, 2.5, 38, 'F');
 
     // Left Box Column - Commercial Investment Totals
     doc.setFontSize(8);
@@ -512,7 +528,7 @@ export function exportToPdf(quote: QuoteData): void {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(148, 163, 184);
-      doc.text(`1-Year Subscription Commitment`, 20, currentY + 37);
+    doc.text(`1-Year Subscription Commitment`, 20, currentY + 37);
     }
 
     // Right Box Column - Payment & Billing Schedule
@@ -530,16 +546,16 @@ export function exportToPdf(quote: QuoteData): void {
     doc.text(`Invoicing Term: ${quote.customerInfo.paymentTerms || 'Net 30 Days'}`, 115, currentY + 33);
     doc.text(`Currency: Base ${currency}`, 115, currentY + 39);
 
-    currentY += 50;
+    currentY += 41;
 
     // 6. Commercial Terms & Stipulations Box
     const disclaimerLines = doc.splitTextToSize(
       quote.disclaimerNotice || 'CONFIDENTIAL - TestGrid Commercial Proposal. Valid for 30 days from issue date.',
       178
     );
-    const disclaimerBoxHeight = Math.max(22, disclaimerLines.length * 3.5 + 10);
+    const disclaimerBoxHeight = Math.min(19, Math.max(16, disclaimerLines.length * 2.1 + 8));
 
-    ensureSpace(disclaimerBoxHeight + 4);
+    ensureSpace(disclaimerBoxHeight + 3);
 
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(226, 232, 240);
@@ -558,15 +574,15 @@ export function exportToPdf(quote: QuoteData): void {
     currentY += disclaimerBoxHeight + 6;
 
     // 7. Proposal Issued By Section (GUARANTEED TO EXPORT - Height ~26mm)
-    ensureSpace(28);
+    ensureSpace(26);
 
     doc.setFillColor(245, 243, 255); // Soft Purple Background (#f5f3ff)
     doc.setDrawColor(221, 214, 254); // Soft Purple Border (#ddd6fe)
-    doc.roundedRect(14, currentY, 182, 24, 3, 3, 'FD');
+      doc.roundedRect(14, currentY, 182, 22, 3, 3, 'FD');
 
     // Purple accent bar
     doc.setFillColor(139, 92, 246);
-    doc.rect(14, currentY, 2.5, 24, 'F');
+    doc.rect(14, currentY, 2.5, 22, 'F');
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
@@ -656,9 +672,9 @@ export function exportToPdf(quote: QuoteData): void {
       doc.setFontSize(7.5);
       doc.setTextColor(148, 163, 184);
       doc.text(
-        `TestGrid Enterprise Proposal  ·  Ref: ${quote.customerInfo.quoteNumber || 'TG-QUOTE'}  ·  Page ${pageNum} of ${totalPages}`,
+        `TestGrid  ·  PRIVATE & CONFIDENTIAL  ·  Ref: ${quote.customerInfo.quoteNumber || 'TG-QUOTE'}`,
         105,
-        290,
+        291,
         { align: 'center' }
       );
     }
@@ -667,7 +683,7 @@ export function exportToPdf(quote: QuoteData): void {
     const clientClean = quote.customerInfo.customerName
       ? quote.customerInfo.customerName.replace(/[^a-zA-Z0-9]/g, '_')
       : 'Client';
-    const filename = `TestGrid_Proposal_${quote.customerInfo.quoteNumber || 'Estimate'}_${clientClean}.pdf`;
+    const filename = `TestGrid_Quote_${quote.customerInfo.quoteNumber || 'Estimate'}_${clientClean}.pdf`;
     doc.save(filename);
   } catch (error) {
     console.error('Error generating PDF proposal:', error);

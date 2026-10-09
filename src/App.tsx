@@ -10,6 +10,7 @@ import { LineItemsSummary } from './components/LineItemsSummary';
 import { WatermarkBackground } from './components/WatermarkBackground';
 import { WatermarkConfigModal } from './components/WatermarkConfigModal';
 import { QuoteHistoryModal } from './components/QuoteHistoryModal';
+import { SalesOrderTab } from './components/SalesOrderTab';
 
 export default function App() {
   const [quote, setQuote] = useState<QuoteData>(() => {
@@ -26,6 +27,7 @@ export default function App() {
 
   const [isWatermarkModalOpen, setIsWatermarkModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'quote' | 'sales-order'>('quote');
 
   // Auto-save active state to localStorage
   useEffect(() => {
@@ -134,6 +136,11 @@ export default function App() {
 
       {/* Main Pricing Card Container with Watermark Layer behind Form */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10">
+        <div className="mb-5 flex gap-2 rounded-2xl border border-slate-200 bg-white/80 p-1.5 shadow-sm w-fit">
+          <button type="button" onClick={() => setActiveTab('quote')} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${activeTab === 'quote' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>Quote builder</button>
+          <button type="button" onClick={() => setActiveTab('sales-order')} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${activeTab === 'sales-order' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>Sales order</button>
+        </div>
+        {activeTab === 'sales-order' ? <SalesOrderTab quote={quote} /> : <>
         <div className="relative overflow-hidden bg-white/95 backdrop-blur-xl border border-purple-100/80 rounded-3xl shadow-xl shadow-purple-950/5 p-4 sm:p-8 space-y-6 sm:space-y-8">
           {/* Background Watermark Layer - Sits behind the entire form and scrolls naturally */}
           <WatermarkBackground settings={quote.watermarkSettings} />
@@ -207,6 +214,7 @@ export default function App() {
             />
           </div>
         </div>
+        </>}
       </main>
 
       {/* Modals */}
