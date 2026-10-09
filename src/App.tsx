@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { QuoteData, WatermarkSettings, QuoteCustomerInfo, PlanColumn, AddonItem, CustomServiceItem, DiscountSettings } from './types';
-import { INITIAL_QUOTE_STATE } from './data/defaults';
+import { QuoteData, WatermarkSettings, QuoteCustomerInfo, PlanColumn, AddonItem, CustomServiceItem, DiscountSettings, SalesOrderData } from './types';
+import { buildDefaultOrderInstructions, INITIAL_QUOTE_STATE } from './data/defaults';
 import { Navbar } from './components/Navbar';
 import { CustomerHeader } from './components/CustomerHeader';
 import { TierSection } from './components/TierSection';
@@ -12,12 +12,40 @@ import { WatermarkConfigModal } from './components/WatermarkConfigModal';
 import { QuoteHistoryModal } from './components/QuoteHistoryModal';
 import { SalesOrderTab } from './components/SalesOrderTab';
 
+function createOrderFromQuote(quote: QuoteData, forceNew = false): SalesOrderData {
+  const legacyCustomer = quote.customerInfo as QuoteCustomerInfo & { poNumber?: string; billingAddress?: string; serviceAddress?: string };
+  return quote.salesOrder && !forceNew ? quote.salesOrder : {
+    id: `order-${quote.id}`,
+    sourceQuoteId: quote.id,
+    invoiceNumber: `TG-INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    orderDate: new Date().toISOString().split('T')[0],
+    purchaseOrderNumber: legacyCustomer.poNumber || '',
+    paymentTerms: quote.customerInfo.paymentTerms || 'Net 30 Days',
+    billingAddress: legacyCustomer.billingAddress || '',
+    serviceAddress: legacyCustomer.serviceAddress || '',
+    instructions: (quote as QuoteData & { salesOrderNotes?: string }).salesOrderNotes || buildDefaultOrderInstructions(quote.disclaimerNotice),
+  };
+}
+
+function normalizeQuote(quote: QuoteData): QuoteData {
+  const salesOrder = createOrderFromQuote(quote);
+  return {
+    ...quote,
+    salesOrder: {
+      ...salesOrder,
+      sourceQuoteId: quote.id,
+      instructions: salesOrder.instructions || buildDefaultOrderInstructions(quote.disclaimerNotice),
+    },
+    watermarkSettings: { ...quote.watermarkSettings, angle: Math.abs(quote.watermarkSettings.angle ?? 20) },
+  };
+}
+
 export default function App() {
   const [quote, setQuote] = useState<QuoteData>(() => {
     try {
       const active = localStorage.getItem('testgrid_active_quote');
       if (active) {
-        return JSON.parse(active);
+        return normalizeQuote(JSON.parse(active) as QuoteData);
       }
     } catch {
       // ignore
@@ -102,7 +130,7 @@ export default function App() {
   };
 
   const handleResetQuote = () => {
-    setQuote({
+    const freshQuote: QuoteData = {
       ...INITIAL_QUOTE_STATE,
       id: `quote-${Date.now()}`,
       createdAt: new Date().toISOString(),
@@ -112,7 +140,9 @@ export default function App() {
         date: new Date().toISOString().split('T')[0],
         quoteNumber: `TG-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
       },
-    });
+    };
+    freshQuote.salesOrder = createOrderFromQuote(freshQuote, true);
+    setQuote(freshQuote);
   };
 
   const currencySymbol =
@@ -123,7 +153,12 @@ export default function App() {
       : '$';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 via-purple-50/30 to-pink-50/40 text-slate-800 font-sans relative antialiased selection:bg-purple-500/20 selection:text-purple-900">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-sky-50 via-teal-50/45 to-purple-50/55 font-sans text-slate-800 antialiased selection:bg-purple-500/20 selection:text-purple-900">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -left-40 top-24 h-[28rem] w-[28rem] rounded-full bg-sky-300/20 blur-[100px]" />
+        <div className="absolute right-[-8rem] top-[30rem] h-[30rem] w-[30rem] rounded-full bg-teal-300/20 blur-[110px]" />
+        <div className="absolute bottom-[-12rem] left-1/3 h-[32rem] w-[32rem] rounded-full bg-pink-300/20 blur-[120px]" />
+      </div>
       {/* Main Sticky Navbar */}
       <Navbar
         watermarkSettings={quote.watermarkSettings}
@@ -136,11 +171,11 @@ export default function App() {
 
       {/* Main Pricing Card Container with Watermark Layer behind Form */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10">
-        <div className="mb-5 flex gap-2 rounded-2xl border border-slate-200 bg-white/80 p-1.5 shadow-sm w-fit">
-          <button type="button" onClick={() => setActiveTab('quote')} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${activeTab === 'quote' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>Quote builder</button>
-          <button type="button" onClick={() => setActiveTab('sales-order')} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${activeTab === 'sales-order' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>Sales order</button>
+        <div className="mb-5 flex w-fit gap-2 rounded-2xl border border-white/80 bg-white/65 p-1.5 shadow-lg shadow-indigo-950/5 backdrop-blur-xl">
+          <button type="button" onClick={() => setActiveTab('quote')} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${activeTab === 'quote' ? 'bg-gradient-to-r from-sky-600 via-purple-600 to-pink-500 text-white shadow-md shadow-purple-500/20' : 'text-slate-600 hover:bg-white/80'}`}>Quote builder</button>
+          <button type="button" onClick={() => setActiveTab('sales-order')} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${activeTab === 'sales-order' ? 'bg-gradient-to-r from-sky-600 via-purple-600 to-pink-500 text-white shadow-md shadow-purple-500/20' : 'text-slate-600 hover:bg-white/80'}`}>Sales order</button>
         </div>
-        {activeTab === 'sales-order' ? <SalesOrderTab quote={quote} /> : <>
+        {activeTab === 'sales-order' ? <SalesOrderTab quote={quote} order={quote.salesOrder || createOrderFromQuote(quote)} onChangeOrder={(salesOrder) => setQuote((prev) => ({ ...prev, salesOrder, updatedAt: new Date().toISOString() }))} /> : <>
         <div className="relative overflow-hidden bg-white/95 backdrop-blur-xl border border-purple-100/80 rounded-3xl shadow-xl shadow-purple-950/5 p-4 sm:p-8 space-y-6 sm:space-y-8">
           {/* Background Watermark Layer - Sits behind the entire form and scrolls naturally */}
           <WatermarkBackground settings={quote.watermarkSettings} />
@@ -207,7 +242,16 @@ export default function App() {
             <LineItemsSummary
               quote={quote}
               onChangeDiscount={handleUpdateDiscount}
-              onChangeDisclaimer={(disclaimerNotice) => setQuote((prev) => ({ ...prev, disclaimerNotice }))}
+              onChangeDisclaimer={(disclaimerNotice) => setQuote((prev) => {
+                const priorCopiedTerms = buildDefaultOrderInstructions(prev.disclaimerNotice);
+                const nextCopiedTerms = buildDefaultOrderInstructions(disclaimerNotice);
+                const shouldRefreshInstructions = !prev.salesOrder.instructions.trim() || prev.salesOrder.instructions === priorCopiedTerms;
+                return {
+                  ...prev,
+                  disclaimerNotice,
+                  salesOrder: shouldRefreshInstructions ? { ...prev.salesOrder, instructions: nextCopiedTerms } : prev.salesOrder,
+                };
+              })}
               onChangeCreatorInfo={handleUpdateCreatorInfo}
               onExcludeLineItem={handleExcludeLineItem}
               currencyCode={quote.customerInfo.currency || 'USD'}
@@ -229,7 +273,7 @@ export default function App() {
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
         currentQuote={quote}
-        onLoadQuote={(q) => setQuote(q)}
+        onLoadQuote={(q) => setQuote(normalizeQuote(q))}
       />
     </div>
   );

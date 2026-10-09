@@ -36,6 +36,18 @@ export interface QuoteCustomerInfo {
   currency: string; // 'USD', 'EUR', 'GBP', 'INR', etc.
 }
 
+export interface SalesOrderData {
+  id: string;
+  sourceQuoteId: string;
+  invoiceNumber: string;
+  orderDate: string;
+  purchaseOrderNumber: string;
+  paymentTerms: string;
+  billingAddress: string;
+  serviceAddress: string;
+  instructions: string;
+}
+
 export interface CreatorContactInfo {
   authorName: string;
   authorRole: string;
@@ -127,6 +139,7 @@ export interface QuoteData {
   watermarkSettings: WatermarkSettings;
   disclaimerNotice: string;
   notes: string;
+  salesOrder: SalesOrderData;
   showAddonsSection?: boolean;
   showServicesSection?: boolean;
   creatorContactInfo?: CreatorContactInfo;

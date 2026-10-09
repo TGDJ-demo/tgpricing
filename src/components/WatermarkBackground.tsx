@@ -12,7 +12,7 @@ export const WatermarkBackground: React.FC<WatermarkBackgroundProps> = ({ settin
 
   return (
     <div
-      className="absolute inset-0 pointer-events-none select-none z-0 overflow-hidden flex items-center justify-center flex-col opacity-90"
+      className="absolute inset-0 pointer-events-none select-none z-0 overflow-hidden flex items-center justify-center flex-col"
       aria-hidden="true"
     >
       <div className="sticky top-1/3 transform -translate-y-1/2 flex flex-col items-center justify-center my-auto">
@@ -20,7 +20,7 @@ export const WatermarkBackground: React.FC<WatermarkBackgroundProps> = ({ settin
           <div
             className="transition-all duration-300 transform pointer-events-none flex flex-col items-center justify-center"
             style={{
-              opacity: Math.max(settings.opacity || 0.1, 0.08),
+              opacity: Math.min(0.3, Math.max(settings.opacity ?? 0.08, 0.02)),
               transform: `rotate(${settings.angle || -15}deg)`,
             }}
           >
@@ -36,7 +36,7 @@ export const WatermarkBackground: React.FC<WatermarkBackgroundProps> = ({ settin
             className="text-center font-black uppercase tracking-widest transition-all duration-300 transform pointer-events-none"
             style={{
               color: settings.color || '#0f172a',
-              opacity: Math.max(settings.opacity || 0.08, 0.06),
+              opacity: Math.min(0.3, Math.max(settings.opacity ?? 0.08, 0.02)),
               fontSize: `${settings.fontSize || 7}rem`,
               transform: `rotate(${settings.angle || -20}deg)`,
               lineHeight: 1.1,

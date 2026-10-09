@@ -1,6 +1,7 @@
 import React from 'react';
 import { QuoteCustomerInfo } from '../types';
 import { Tooltip } from './Tooltip';
+import { formInputClassName } from './formStyles';
 import {
   User,
   Building2,
@@ -11,15 +12,12 @@ import {
   Mail,
   CreditCard,
   RefreshCw,
-  Briefcase,
   ShieldCheck,
 } from 'lucide-react';
-
 interface CustomerHeaderProps {
   customerInfo: QuoteCustomerInfo;
   onChangeCustomerInfo: (updated: QuoteCustomerInfo) => void;
 }
-
 export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
   customerInfo,
   onChangeCustomerInfo,
@@ -54,7 +52,7 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
             </div>
             <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-0.5">
               Enterprise Automated Testing Platform & Cross-Browser Infrastructure
-            </p>
+              </p>
           </div>
         </div>
 
@@ -62,7 +60,7 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
         <div className="flex items-center gap-2">
           <Tooltip content="Unique commercial proposal reference ID for client tracking" position="left">
             <div className="text-xs font-mono font-bold text-indigo-950 bg-gradient-to-r from-blue-50/80 to-purple-50/80 px-3.5 py-2 rounded-xl border border-indigo-200/80 flex items-center gap-2 shadow-2xs">
-              <FileCode className="w-4 h-4 text-indigo-600" /> Ref: {customerInfo.quoteNumber}
+              <FileCode className="w-4 h-4 text-indigo-600" /> Quote Number: {customerInfo.quoteNumber}
               <Tooltip content="Generate new random quote reference number" position="top">
                 <button
                   type="button"
@@ -91,7 +89,7 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
             value={customerInfo.customerName}
             onChange={(e) => handleChange('customerName', e.target.value)}
             placeholder="e.g. Acme Enterprise"
-            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
+            className={formInputClassName}
           />
         </div>
 
@@ -107,7 +105,7 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
             value={customerInfo.customerEmail}
             onChange={(e) => handleChange('customerEmail', e.target.value)}
             placeholder="e.g. procurement@acme.com"
-            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
+            className={formInputClassName}
           />
         </div>
 
@@ -138,7 +136,7 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
             value={customerInfo.preparedBy}
             onChange={(e) => handleChange('preparedBy', e.target.value)}
             placeholder="Your Name"
-            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
+            className={formInputClassName}
           />
         </div>
 
@@ -153,7 +151,7 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
             type="date"
             value={customerInfo.date}
             onChange={(e) => handleChange('date', e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
+            className={formInputClassName}
           />
         </div>
 
@@ -169,7 +167,7 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
             value={customerInfo.validityDays}
             onChange={(e) => handleChange('validityDays', e.target.value)}
             placeholder="e.g. 30 days"
-            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
+            className={formInputClassName}
           />
         </div>
 
@@ -177,7 +175,7 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
         <div className="space-y-1.5">
           <Tooltip content="Standard invoice payment timeframe agreement (e.g., Net 30 Days)" position="top">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 cursor-pointer">
-              <CreditCard className="w-3.5 h-3.5 text-teal-500" /> Invoicing Window
+              <CreditCard className="w-3.5 h-3.5 text-teal-500" /> Payment Terms
             </label>
           </Tooltip>
           <input
@@ -185,25 +183,12 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
             value={customerInfo.paymentTerms}
             onChange={(e) => handleChange('paymentTerms', e.target.value)}
             placeholder="e.g. Net 30 Days"
-            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
+            className={formInputClassName}
           />
         </div>
 
-        {/* Quote Reference ID */}
-        <div className="space-y-1.5">
-          <Tooltip content="Custom reference code for tracking and internal billing" position="top">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 cursor-pointer">
-              <Briefcase className="w-3.5 h-3.5 text-pink-500" /> Reference ID
-            </label>
-          </Tooltip>
-          <input
-            type="text"
-            value={customerInfo.quoteNumber}
-            onChange={(e) => handleChange('quoteNumber', e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs font-mono"
-          />
-        </div>
       </div>
+
     </div>
   );
 };

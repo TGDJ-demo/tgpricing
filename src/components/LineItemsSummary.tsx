@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { QuoteData, DiscountSettings, CreatorContactInfo } from '../types';
-import { calculateQuoteLineItems, formatCurrencyVal, exportToPdf } from '../utils/exportUtils';
+import { calculateQuoteLineItems, formatCurrencyVal } from '../utils/exportUtils';
 import { Tooltip } from './Tooltip';
+import { PdfPreviewModal } from './PdfPreviewModal';
 import {
   Tag,
   Percent,
@@ -38,7 +39,16 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
   onExcludeLineItem,
   currencyCode,
 }) => {
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const termsRef = useRef<HTMLTextAreaElement>(null);
   const calc = calculateQuoteLineItems(quote);
+
+  useLayoutEffect(() => {
+    const field = termsRef.current;
+    if (!field) return;
+    field.style.height = 'auto';
+    field.style.height = `${field.scrollHeight}px`;
+  }, [quote.disclaimerNotice]);
 
   const handleToggleBillingCycle = (cycle: 'annual' | 'monthly') => {
     onChangeDiscount({
@@ -291,38 +301,40 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
       </div>
 
       {/* 3. Executive Financial Investment Card */}
-      <div className="rounded-2xl p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 text-white shadow-xl shadow-indigo-950/20 border border-purple-800/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition">
+      <div className="relative isolate overflow-hidden rounded-2xl border border-white/80 bg-gradient-to-br from-sky-100 via-teal-50 to-purple-100 p-6 text-indigo-950 shadow-xl shadow-indigo-950/10 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 -z-10 h-64 w-64 rounded-full bg-pink-300/35 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 left-1/3 -z-10 h-56 w-56 rounded-full bg-teal-300/35 blur-3xl" />
         <div className="space-y-2 w-full">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase tracking-widest text-pink-300 bg-pink-950/80 border border-pink-700/80 px-2.5 py-0.5 rounded-md flex items-center gap-1">
-              <FileCheck className="w-3.5 h-3.5 text-pink-400" /> Total Contract Value Summary
+            <span className="text-xs font-black uppercase tracking-widest text-purple-800 bg-white/75 border border-purple-200 px-2.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm backdrop-blur-md">
+              <FileCheck className="w-3.5 h-3.5 text-pink-500" /> Total Contract Value Summary
             </span>
             {calc.discountAmount > 0 && (
-              <span className="text-xs font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-md">
+              <span className="text-xs font-bold bg-teal-100/80 text-teal-800 border border-teal-200 px-2 py-0.5 rounded-md">
                 Savings: {formatCurrencyVal(calc.discountAmount, currencyCode)} ({calc.effectiveDiscountRate.toFixed(1)}% Discount)
               </span>
             )}
           </div>
 
           {/* Annual Value (ACV) */}
-          <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white pt-1">
+          <div className="bg-gradient-to-r from-sky-700 via-teal-700 to-purple-700 bg-clip-text text-3xl font-black font-mono tracking-tight text-transparent pt-1 sm:text-4xl">
             {formatCurrencyVal(calc.grandTotal, currencyCode)}{' '}
-            <span className="text-xs font-bold text-slate-300 font-sans uppercase tracking-wider">
+            <span className="text-xs font-bold text-indigo-700 font-sans uppercase tracking-wider">
               {currencyCode} / Annual Contract Value (ACV)
             </span>
           </div>
 
           {/* Multi-Year TCV & Installment Breakdown */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-slate-300 font-semibold pt-1">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-slate-600 font-semibold pt-1">
             <div>
               Total Multi-Year Value ({calc.commitmentYears} Yrs):{' '}
-              <strong className="text-white font-mono font-bold text-sm">
+                <strong className="text-indigo-950 font-mono font-bold text-sm">
                 {formatCurrencyVal(calc.multiYearTotal, currencyCode)} {currencyCode}
               </strong>
             </div>
-            <div className="text-teal-300">
+            <div className="text-teal-800">
               Installment Amount:{' '}
-              <strong className="text-white font-mono font-bold text-sm">
+                <strong className="text-purple-800 font-mono font-bold text-sm">
                 {formatCurrencyVal(calc.installmentAmount, currencyCode)} {currencyCode}
               </strong>{' '}
               ({calc.installmentLabel})
@@ -438,11 +450,12 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
               <ShieldAlert className="w-3.5 h-3.5 text-purple-600" /> Commercial Terms, Privacy & Confidentiality Notice
             </label>
             <textarea
+              ref={termsRef}
               rows={3}
               value={quote.disclaimerNotice}
               onChange={(e) => onChangeDisclaimer(e.target.value)}
               placeholder="Stipulations, privacy terms & legal disclaimer notice..."
-              className="w-full p-3.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-800 leading-relaxed outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-300 transition resize-y font-sans shadow-2xs"
+              className="w-full min-h-20 overflow-hidden p-3.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-800 leading-relaxed outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-300 transition resize-none font-sans shadow-2xs"
             />
           </div>
 
@@ -451,15 +464,16 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
             <Tooltip content="Generate and download high-resolution PDF sales proposal document" position="left">
               <button
                 type="button"
-                onClick={() => exportToPdf(quote)}
+                onClick={() => setShowPdfPreview(true)}
                 className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-teal-400 via-indigo-500 to-pink-500 hover:from-teal-300 hover:to-pink-400 text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-lg shadow-purple-500/20 transition transform active:scale-98 cursor-pointer h-[68px]"
               >
-                <Download className="w-4 h-4 text-white" /> Export Proposal (PDF)
+                <Download className="w-4 h-4 text-white" /> Preview &amp; download quote PDF
               </button>
             </Tooltip>
           </div>
         </div>
       </div>
+      {showPdfPreview && <PdfPreviewModal quote={quote} type="quote" onClose={() => setShowPdfPreview(false)} />}
     </div>
   );
 };
