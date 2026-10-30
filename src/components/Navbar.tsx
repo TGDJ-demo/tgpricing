@@ -26,7 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-black text-2xl tracking-tight text-slate-900">
+          <div className="flex items-center gap-0 font-black text-2xl tracking-tight text-slate-900">
             <span>Test</span>
             <span className="bg-gradient-to-r from-teal-500 via-purple-600 to-pink-500 bg-clip-text text-transparent font-black">
               Grid
