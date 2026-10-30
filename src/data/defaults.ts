@@ -25,6 +25,7 @@ export const DEFAULT_CUSTOMER: QuoteCustomerInfo = {
   quoteNumber: 'TG-2026-8041',
   customerName: 'Acme Enterprises Inc.',
   customerEmail: 'procurement@acme.com',
+  customerOrganization: 'Acme Enterprises Inc.',
   companyName: 'TestGrid Labs Inc.',
   preparedBy: 'Damanjeet Singh',
   preparedByTitle: 'Senior Enterprise Solutions Architect',
@@ -50,6 +51,7 @@ export const DEFAULT_PLANS: PlanColumn[] = [
     title: 'Hosted Private Cloud',
     badge: 'Private cloud',
     iconName: 'Cloud',
+    selectedTierId: 'tier-hosted-1',
     tiers: [
       {
         id: 'tier-hosted-1',
@@ -70,6 +72,7 @@ export const DEFAULT_PLANS: PlanColumn[] = [
     title: 'On-Premise',
     badge: 'Self-hosted',
     iconName: 'Server',
+    selectedTierId: 'tier-onprem-1',
     tiers: [
       {
         id: 'tier-onprem-1',
@@ -177,6 +180,10 @@ export const DEFAULT_DISCLAIMER = `+ Premium 24/7 dedicated support and an assig
 PRIVATE & CONFIDENTIAL NOTICE
 This pricing quote contains proprietary information intended solely for the recipient organization. Prices listed are net values in the chosen currency and valid for 30 days from issue date.`;
 
+export function buildDefaultOrderInstructions(commercialTerms: string): string {
+  return commercialTerms.trim();
+}
+
 export const INITIAL_QUOTE_STATE: QuoteData = {
   id: 'quote-default-1',
   title: 'Standard TestGrid Enterprise Quote',
@@ -190,6 +197,17 @@ export const INITIAL_QUOTE_STATE: QuoteData = {
   watermarkSettings: DEFAULT_WATERMARK,
   disclaimerNotice: DEFAULT_DISCLAIMER,
   notes: 'Customer requested 5 dedicated mobile devices + 10 browser execution channels for iOS/Android regression suite.',
+  salesOrder: {
+    id: 'order-default-1',
+    sourceQuoteId: 'quote-default-1',
+    invoiceNumber: 'TG-INV-2026-8041',
+    orderDate: new Date().toISOString().split('T')[0],
+    purchaseOrderNumber: '',
+    paymentTerms: DEFAULT_CUSTOMER.paymentTerms,
+    billingAddress: '',
+    serviceAddress: '',
+    instructions: buildDefaultOrderInstructions(DEFAULT_DISCLAIMER),
+  },
   showAddonsSection: true,
   showServicesSection: true,
   creatorContactInfo: DEFAULT_CREATOR_INFO,
@@ -205,6 +223,7 @@ export const SAMPLE_TEMPLATES: { name: string; description: string; data: Partia
         ...DEFAULT_CUSTOMER,
         companyName: 'TestGrid Labs Inc.',
         customerName: 'Global Fintech Corp',
+        customerOrganization: 'Global Fintech Corp',
       },
       plans: [
         {
@@ -245,6 +264,7 @@ export const SAMPLE_TEMPLATES: { name: string; description: string; data: Partia
         ...DEFAULT_CUSTOMER,
         companyName: 'TestGrid Labs Inc.',
         customerName: 'First National Bank',
+        customerOrganization: 'First National Bank',
       },
       plans: [
         {
@@ -285,6 +305,7 @@ export const SAMPLE_TEMPLATES: { name: string; description: string; data: Partia
         ...DEFAULT_CUSTOMER,
         companyName: 'TestGrid Labs Inc.',
         customerName: 'OmniHealth Technologies',
+        customerOrganization: 'OmniHealth Technologies',
       },
       plans: DEFAULT_PLANS.map((plan, idx) => ({
         ...plan,

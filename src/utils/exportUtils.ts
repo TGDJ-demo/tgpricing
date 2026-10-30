@@ -3,6 +3,18 @@ import autoTable from 'jspdf-autotable';
 import { QuoteData, QuoteCalculatedLineItem, CreatorContactInfo } from '../types';
 import { CURRENCIES } from '../data/defaults';
 
+export function getSelectedTierId(plan: QuoteData['plans'][number]): string | undefined {
+  if (plan.selectedTierId && plan.tiers.some((tier) => tier.id === plan.selectedTierId)) {
+    return plan.selectedTierId;
+  }
+
+  return (
+    plan.tiers.find(
+      (tier) => tier.deviceQty > 0 || tier.browserQty > 0 || (tier.concurrentQty || 0) > 0
+    )?.id || plan.tiers[0]?.id
+  );
+}
+
 // Utility currency formatter
 export function formatCurrencyVal(amount: number, currencyCode: string = 'USD'): string {
   const currencyObj = CURRENCIES.find((c) => c.code === currencyCode) || CURRENCIES[0];
@@ -54,7 +66,9 @@ export function calculateQuoteLineItems(quote: QuoteData): {
   if (quote.plans) {
     quote.plans.forEach((plan) => {
       if (plan.hidden) return;
+      const selectedTierId = getSelectedTierId(plan);
       plan.tiers.forEach((tier) => {
+        if (tier.id !== selectedTierId) return;
         // Device Licenses
         if (tier.deviceQty > 0) {
           const itemId = `${tier.id}-device`;
@@ -289,14 +303,23 @@ export function exportToPdf(quote: QuoteData): void {
     const currency = quote.customerInfo.currency || 'USD';
 
     // Ensure Creator Info has complete fallback data
-    const creator: CreatorContactInfo = quote.creatorContactInfo || {
-      authorName: quote.customerInfo.preparedBy || 'TestGrid Solutions Advisory',
-      authorRole: quote.customerInfo.preparedByTitle || 'Senior Enterprise Solutions Architect',
-      department: 'Solutions Engineering & Advisory',
-      authorEmail: quote.customerInfo.preparedByEmail || 'sales@testgrid.io',
-      authorPhone: '+1 (800) 555-8378',
-      companyWebsite: 'https://testgrid.io',
-      supportEmail: 'support@testgrid.io',
+    const creator: CreatorContactInfo = {
+      authorName:
+        quote.customerInfo.preparedBy ||
+        quote.creatorContactInfo?.authorName ||
+        'TestGrid Solutions Advisory',
+      authorRole:
+        quote.customerInfo.preparedByTitle ||
+        quote.creatorContactInfo?.authorRole ||
+        'Senior Enterprise Solutions Architect',
+      department: quote.creatorContactInfo?.department || 'Solutions Engineering & Advisory',
+      authorEmail:
+        quote.customerInfo.preparedByEmail ||
+        quote.creatorContactInfo?.authorEmail ||
+        'sales@testgrid.io',
+      authorPhone: quote.creatorContactInfo?.authorPhone || '+1 (800) 555-8378',
+      companyWebsite: quote.creatorContactInfo?.companyWebsite || 'https://testgrid.io',
+      supportEmail: quote.creatorContactInfo?.supportEmail || 'support@testgrid.io',
     };
 
     // Modern Light Theme Palette RGB Colors
@@ -360,7 +383,7 @@ export function exportToPdf(quote: QuoteData): void {
     doc.setFontSize(8);
     doc.setTextColor(51, 65, 85);
     doc.text(`Contact: ${quote.customerInfo.customerEmail || 'N/A'}`, 18, 49);
-    doc.text(`Organization: ${quote.customerInfo.companyName || 'TestGrid Partner'}`, 18, 55);
+    doc.text(`Organization: ${quote.customerInfo.customerOrganization || 'N/A'}`, 18, 55);
     doc.text(`Payment Terms: ${quote.customerInfo.paymentTerms || 'Net 30 Days'}`, 18, 61);
 
     // Column 2: Provider & Representative Info

@@ -1,6 +1,6 @@
 import React from 'react';
-import { QuoteData, DiscountSettings, CreatorContactInfo } from '../types';
-import { calculateQuoteLineItems, formatCurrencyVal, exportToPdf } from '../utils/exportUtils';
+import { QuoteData, QuoteCustomerInfo, DiscountSettings, CreatorContactInfo } from '../types';
+import { calculateQuoteLineItems, formatCurrencyVal } from '../utils/exportUtils';
 import { Tooltip } from './Tooltip';
 import {
   Tag,
@@ -18,14 +18,17 @@ import {
   X,
   CreditCard,
   FileCheck,
+  Briefcase,
 } from 'lucide-react';
 
 interface LineItemsSummaryProps {
   quote: QuoteData;
   onChangeDiscount: (discount: DiscountSettings) => void;
   onChangeDisclaimer: (text: string) => void;
+  onChangeCustomerInfo: (customerInfo: QuoteCustomerInfo) => void;
   onChangeCreatorInfo?: (creator: CreatorContactInfo) => void;
   onExcludeLineItem: (itemId: string) => void;
+  onOpenPdfPreview: () => void;
   onOpenGoogleSheetsModal?: () => void;
   currencyCode: string;
 }
@@ -34,8 +37,10 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
   quote,
   onChangeDiscount,
   onChangeDisclaimer,
+  onChangeCustomerInfo,
   onChangeCreatorInfo,
   onExcludeLineItem,
+  onOpenPdfPreview,
   currencyCode,
 }) => {
   const calc = calculateQuoteLineItems(quote);
@@ -62,17 +67,38 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
     onChangeDiscount({ ...quote.discountSettings, paymentSchedule: schedule });
   };
 
-  const creator: CreatorContactInfo = quote.creatorContactInfo || {
-    authorName: 'TestGrid Solutions Engineering',
-    authorRole: 'Enterprise Advisory Lead',
-    department: 'Solutions Engineering & Architecture',
-    authorEmail: 'sales@testgrid.io',
-    authorPhone: '+1 (800) 555-8378',
-    companyWebsite: 'https://testgrid.io',
-    supportEmail: 'support@testgrid.io',
+  const creator: CreatorContactInfo = {
+    authorName:
+      quote.customerInfo.preparedBy ||
+      quote.creatorContactInfo?.authorName ||
+      'TestGrid Solutions Engineering',
+    authorRole:
+      quote.customerInfo.preparedByTitle ||
+      quote.creatorContactInfo?.authorRole ||
+      'Enterprise Advisory Lead',
+    department: quote.creatorContactInfo?.department || 'Solutions Engineering & Architecture',
+    authorEmail:
+      quote.customerInfo.preparedByEmail ||
+      quote.creatorContactInfo?.authorEmail ||
+      'sales@testgrid.io',
+    authorPhone: quote.creatorContactInfo?.authorPhone || '+1 (800) 555-8378',
+    companyWebsite: quote.creatorContactInfo?.companyWebsite || 'https://testgrid.io',
+    supportEmail: quote.creatorContactInfo?.supportEmail || 'support@testgrid.io',
   };
 
   const handleUpdateCreatorField = (field: keyof CreatorContactInfo, value: string) => {
+    if (field === 'authorName') {
+      onChangeCustomerInfo({ ...quote.customerInfo, preparedBy: value });
+      return;
+    }
+    if (field === 'authorRole') {
+      onChangeCustomerInfo({ ...quote.customerInfo, preparedByTitle: value });
+      return;
+    }
+    if (field === 'authorEmail') {
+      onChangeCustomerInfo({ ...quote.customerInfo, preparedByEmail: value });
+      return;
+    }
     if (onChangeCreatorInfo) {
       onChangeCreatorInfo({ ...creator, [field]: value });
     }
@@ -352,6 +378,21 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
             </div>
           </div>
 
+          {/* Author Title */}
+          <div className="flex items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 shadow-2xs">
+            <Briefcase className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
+            <div className="w-full">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Title</span>
+              <input
+                type="text"
+                value={creator.authorRole}
+                onChange={(e) => handleUpdateCreatorField('authorRole', e.target.value)}
+                placeholder="Your title"
+                className="w-full text-xs font-semibold text-slate-800 bg-transparent outline-none"
+              />
+            </div>
+          </div>
+
           {/* Author Email */}
           <div className="flex items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 shadow-2xs">
             <Mail className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
@@ -451,7 +492,7 @@ export const LineItemsSummary: React.FC<LineItemsSummaryProps> = ({
             <Tooltip content="Generate and download high-resolution PDF sales proposal document" position="left">
               <button
                 type="button"
-                onClick={() => exportToPdf(quote)}
+                onClick={onOpenPdfPreview}
                 className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-teal-400 via-indigo-500 to-pink-500 hover:from-teal-300 hover:to-pink-400 text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-lg shadow-purple-500/20 transition transform active:scale-98 cursor-pointer h-[68px]"
               >
                 <Download className="w-4 h-4 text-white" /> Export Proposal (PDF)

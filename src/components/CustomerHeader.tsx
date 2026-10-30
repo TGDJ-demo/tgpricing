@@ -111,6 +111,23 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
           />
         </div>
 
+        {/* Customer Organization */}
+        <div className="space-y-1.5">
+          <Tooltip content="Purchasing customer's organization" position="top">
+            <label htmlFor="customer-organization" className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 cursor-pointer">
+              <Building2 className="w-3.5 h-3.5 text-purple-500" /> Customer Organization
+            </label>
+          </Tooltip>
+          <input
+            id="customer-organization"
+            type="text"
+            value={customerInfo.customerOrganization || ''}
+            onChange={(e) => handleChange('customerOrganization', e.target.value)}
+            placeholder="e.g. Acme Enterprises"
+            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
+          />
+        </div>
+
         {/* Provider Organization */}
         <div className="space-y-1.5">
           <Tooltip content="Issuing platform provider entity" position="top">
@@ -138,6 +155,40 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
             value={customerInfo.preparedBy}
             onChange={(e) => handleChange('preparedBy', e.target.value)}
             placeholder="Your Name"
+            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
+          />
+        </div>
+
+        {/* Prepared By Title */}
+        <div className="space-y-1.5">
+          <Tooltip content="Job title of the account lead issuing this proposal" position="top">
+            <label htmlFor="account-lead-title" className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 cursor-pointer">
+              <Briefcase className="w-3.5 h-3.5 text-pink-500" /> Account Lead Title
+            </label>
+          </Tooltip>
+          <input
+            id="account-lead-title"
+            type="text"
+            value={customerInfo.preparedByTitle || ''}
+            onChange={(e) => handleChange('preparedByTitle', e.target.value)}
+            placeholder="Your title"
+            className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
+          />
+        </div>
+
+        {/* Prepared By Email */}
+        <div className="space-y-1.5">
+          <Tooltip content="Email address for the account lead issuing this proposal" position="top">
+            <label htmlFor="account-lead-email" className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 cursor-pointer">
+              <Mail className="w-3.5 h-3.5 text-purple-500" /> Account Lead Email
+            </label>
+          </Tooltip>
+          <input
+            id="account-lead-email"
+            type="email"
+            value={customerInfo.preparedByEmail || ''}
+            onChange={(e) => handleChange('preparedByEmail', e.target.value)}
+            placeholder="e.g. sales@example.com"
             className="w-full px-3.5 py-2.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-purple-400 focus:border-purple-300 outline-none transition shadow-2xs"
           />
         </div>

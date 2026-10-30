@@ -1,5 +1,6 @@
 import React from 'react';
 import { PlanColumn, TierRowData } from '../types';
+import { getSelectedTierId } from '../utils/exportUtils';
 import { Tooltip } from './Tooltip';
 import { Cloud, Server, Plus, CheckCircle2, Layers, X } from 'lucide-react';
 
@@ -55,12 +56,22 @@ export const TierSection: React.FC<TierSectionProps> = ({
   const handleDeleteTier = (planId: string, tierId: string) => {
     const updated = plans.map((plan) => {
       if (plan.id !== planId) return plan;
+      const tiers = plan.tiers.filter((t) => t.id !== tierId);
       return {
         ...plan,
-        tiers: plan.tiers.filter((t) => t.id !== tierId),
+        tiers,
+        selectedTierId: plan.selectedTierId === tierId ? tiers[0]?.id : plan.selectedTierId,
       };
     });
     onChangePlans(updated);
+  };
+
+  const handleSelectTier = (planId: string, tierId: string) => {
+    onChangePlans(
+      plans.map((plan) =>
+        plan.id === planId ? { ...plan, selectedTierId: tierId } : plan
+      )
+    );
   };
 
   const handleDeletePlanColumn = (planId: string) => {
@@ -78,6 +89,7 @@ export const TierSection: React.FC<TierSectionProps> = ({
       title: `Custom Deployment ${plans.length + 1}`,
       badge: 'Dedicated',
       iconName: 'Server',
+      selectedTierId: `tier-${newPlanId}-1`,
       tiers: [
         {
           id: `tier-${newPlanId}-1`,
@@ -102,7 +114,7 @@ export const TierSection: React.FC<TierSectionProps> = ({
             <Layers className="w-4 h-4 text-purple-600" /> Platform Deployment Plans & License Tiers
           </h3>
           <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-0.5">
-            Configure unit pricing and license quantities for Cloud and On-Premise infrastructure
+            Tiers are alternatives. Select one tier per plan; only selected tiers contribute to quote totals.
           </p>
         </div>
         <Tooltip content="Add a new deployment plan column (e.g., Dedicated Hybrid Cloud)" position="left">
@@ -164,15 +176,38 @@ export const TierSection: React.FC<TierSectionProps> = ({
 
             {/* Tiers List */}
             <div className="space-y-3">
-              {plan.tiers.map((tier) => (
+              {plan.tiers.map((tier) => {
+                const isSelected = getSelectedTierId(plan) === tier.id;
+                const tierSubtotal =
+                  (tier.deviceCost || 0) * (tier.deviceQty || 0) +
+                  (tier.browserCost || 0) * (tier.browserQty || 0) +
+                  (tier.concurrentCost || 0) * (tier.concurrentQty || 0);
+
+                return (
                 <div
                   key={tier.id}
-                  className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-3.5 space-y-3 relative group hover:bg-purple-50/30 transition"
+                  className={`border rounded-xl p-3.5 space-y-3 relative group transition ${
+                    isSelected
+                      ? 'bg-purple-50/70 border-purple-300 shadow-sm'
+                      : 'bg-slate-50/80 border-slate-200/90 hover:bg-purple-50/30'
+                  }`}
                 >
                   {/* Tier Meta Header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 flex-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTier(plan.id, tier.id)}
+                        aria-pressed={isSelected}
+                        className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] font-bold transition ${
+                          isSelected
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'text-slate-500 hover:bg-slate-200'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        {isSelected ? 'Selected for quote' : 'Select tier'}
+                      </button>
                       <input
                         type="text"
                         value={tier.label}
@@ -354,8 +389,13 @@ export const TierSection: React.FC<TierSectionProps> = ({
                     placeholder="Add specific context or tier notes..."
                     className="w-full text-xs text-slate-600 bg-transparent border-t border-dashed border-slate-200 pt-1.5 outline-none placeholder:text-slate-400"
                   />
+                  <div className="text-right text-[11px] font-bold text-slate-700">
+                    Tier subtotal: {currencySymbol}
+                    {Math.round(tierSubtotal).toLocaleString('en-US')}
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Add Custom Tier Button */}

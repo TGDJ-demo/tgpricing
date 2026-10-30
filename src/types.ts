@@ -25,6 +25,7 @@ export interface QuoteCustomerInfo {
   quoteNumber: string;
   customerName: string;
   customerEmail: string;
+  customerOrganization: string;
   companyName: string;
   logoUrl?: string; // Custom company logo DataURL or URL
   preparedBy: string;
@@ -34,6 +35,18 @@ export interface QuoteCustomerInfo {
   validityDays: string; // e.g., '30 days' or '2026-08-31'
   paymentTerms: string; // e.g., 'Net 30', '100% Upfront', '50/50'
   currency: string; // 'USD', 'EUR', 'GBP', 'INR', etc.
+}
+
+export interface SalesOrderData {
+  id: string;
+  sourceQuoteId: string;
+  invoiceNumber: string;
+  orderDate: string;
+  purchaseOrderNumber: string;
+  paymentTerms: string;
+  billingAddress: string;
+  serviceAddress: string;
+  instructions: string;
 }
 
 export interface CreatorContactInfo {
@@ -68,6 +81,7 @@ export interface PlanColumn {
   badge: string;
   iconName: string; // Lucide icon identifier
   tiers: TierRowData[];
+  selectedTierId?: string;
   hidden?: boolean;
 }
 
@@ -127,10 +141,10 @@ export interface QuoteData {
   watermarkSettings: WatermarkSettings;
   disclaimerNotice: string;
   notes: string;
+  salesOrder?: SalesOrderData;
   showAddonsSection?: boolean;
   showServicesSection?: boolean;
   creatorContactInfo?: CreatorContactInfo;
   excludedLineItemIds?: string[];
   themePreset?: ProposalThemeKey;
 }
-
